@@ -10,65 +10,68 @@ workflow {
 	
 	
 	// input channels
-	
+	ch_reads = Channel
+        .fromPath("${params.fastq_dir}/*{R1,R2}*.fastq.gz")
 	
 	// Workflow steps
-    CLUMP_READS ()
-
-    TRIM_TO_AMPLICONS (
-        CLUMP_READS.out
+    CLUMP_READS (
+        ch_reads
     )
 
-    MERGE_PAIRS (
-        TRIM_TO_AMPLICONS.out
-    )
+    // TRIM_TO_AMPLICONS (
+    //     CLUMP_READS.out
+    // )
 
-    MAP_TO_REF (
-        MERGE_PAIRS.out
-    )
+    // MERGE_PAIRS (
+    //     TRIM_TO_AMPLICONS.out
+    // )
 
-    EXTRACT_AMPLICON (
-        MAP_TO_REF.out
-    )
+    // MAP_TO_REF (
+    //     MERGE_PAIRS.out
+    // )
 
-    BAM_TO_FASTQ (
-        EXTRACT_AMPLICON.out
-    )
+    // EXTRACT_AMPLICON (
+    //     MAP_TO_REF.out
+    // )
 
-    FILTER_BY_LENGTH (
-        BAM_TO_FASTQ.out
-    )
+    // BAM_TO_FASTQ (
+    //     EXTRACT_AMPLICON.out
+    // )
 
-    HAPLOTYPE_ASSEMBLY (
-        FILTER_BY_LENGTH.out
-    )
+    // FILTER_BY_LENGTH (
+    //     BAM_TO_FASTQ.out
+    // )
 
-    // RECORD_FREQUENCIES (
+    // HAPLOTYPE_ASSEMBLY (
+    //     FILTER_BY_LENGTH.out
+    // )
+
+    // // RECORD_FREQUENCIES (
+    // //     HAPLOTYPE_ASSEMBLY.out
+    // // )
+
+    // DOWNSAMPLE_ASSEMBLIES (
     //     HAPLOTYPE_ASSEMBLY.out
     // )
 
-    DOWNSAMPLE_ASSEMBLIES (
-        HAPLOTYPE_ASSEMBLY.out
-    )
+    // MAP_TO_REF2 (
+    //     DOWNSAMPLE_ASSEMBLIES.out
+    // )
 
-    MAP_TO_REF2 (
-        DOWNSAMPLE_ASSEMBLIES.out
-    )
+    // CALL_CONSENSUS_SEQS (
+    //     MAP_TO_REF2.out
+    // )
 
-    CALL_CONSENSUS_SEQS (
-        MAP_TO_REF2.out
-    )
+    // CALL_VARIANTS (
+    //     MAP_TO_REF2.out
+    // )
 
-    CALL_VARIANTS (
-        MAP_TO_REF2.out
-    )
-
-    GENERATE_REPORT (
-        DOWNSAMPLE_ASSEMBLIES.out,
-        MAP_TO_REF2.out,
-        CALL_CONSENSUS_SEQS.out,
-        CALL_VARIANTS.out
-    )
+    // GENERATE_REPORT (
+    //     DOWNSAMPLE_ASSEMBLIES.out,
+    //     MAP_TO_REF2.out,
+    //     CALL_CONSENSUS_SEQS.out,
+    //     CALL_VARIANTS.out
+    // )
 	
 	
 }
@@ -90,27 +93,18 @@ workflow {
 
 process CLUMP_READS {
 	
-	// This process does something described here
-	
-	tag "${tag}"
 	publishDir params.results, mode: 'copy'
 	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
 	input:
-	
+	tuple path(reads1), path(reads2)
 	
 	output:
-	
-	
-	when:
-	
+    path "*.fastq.gz"
 	
 	script:
+    sample_id = file(reads1.toString()).getSimpleName().split("_L001")[0]
 	"""
-	
+	clumpify.sh in=${reads1} in2=${reads2} out=${sample_id}_clumped.fastq.gz reorder
 	"""
 }
 
