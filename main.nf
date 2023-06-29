@@ -12,7 +12,6 @@ workflow {
 	// input channels
 	ch_reads = Channel
         .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
-        .view()
 	
 	// Workflow steps
     CLUMP_READS (
@@ -94,17 +93,39 @@ workflow {
 
 process CLUMP_READS {
 	
+	tag "${sample_id}"
 	publishDir params.results, mode: 'copy'
+
+    cpus 3
 	
 	input:
 	tuple val(sample_id), path(reads1), path(reads2)
 	
 	output:
-    path "*.fastq.gz"
+    tuple val(sample_id), path("*.fastq.gz")
 	
 	script:
 	"""
 	clumpify.sh in=${reads1} in2=${reads2} out=${sample_id}_clumped.fastq.gz reorder
+	"""
+}
+
+process TRIM_TO_AMPLICONS {
+	
+	tag "${tag}"
+	publishDir params.results, mode: 'copy'
+
+	cpus 1
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+    tuple val(sample_id), path("*.fastq.gz")
+	
+	script:
+	"""
+	ampl-BBDuk.py 
 	"""
 }
 
