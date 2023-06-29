@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     perl \
     python3 \
     python3-pip \
+    pypy-dev \
     bash
 
 # Download and extract BBTools
@@ -27,7 +28,8 @@ ENV PATH="/bbmap:${PATH}"
 
 # Install PyPy
 RUN apt-get install -y pypy3
-# RUN pypy3 -m pip install gcc7 biopython argparse
+# RUN pypy3 -m ensurepip
+# RUN pypy3 -m pip install biopython argparse
 
 # Install the required Python modules
 RUN pip3 install biopython argparse
