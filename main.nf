@@ -11,7 +11,8 @@ workflow {
 	
 	// input channels
 	ch_reads = Channel
-        .fromPath("${params.fastq_dir}/*{R1,R2}*.fastq.gz")
+        .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
+        .view()
 	
 	// Workflow steps
     CLUMP_READS (
@@ -96,302 +97,41 @@ process CLUMP_READS {
 	publishDir params.results, mode: 'copy'
 	
 	input:
-	tuple path(reads1), path(reads2)
+	tuple val(sample_id), path(reads1), path(reads2)
 	
 	output:
     path "*.fastq.gz"
 	
 	script:
-    sample_id = file(reads1.toString()).getSimpleName().split("_L001")[0]
 	"""
 	clumpify.sh in=${reads1} in2=${reads2} out=${sample_id}_clumped.fastq.gz reorder
 	"""
 }
 
-process PROCESS_NAME {
+// process PROCESS_NAME {
 	
-	// This process does something described here
+// 	// This process does something described here
 	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
+// 	tag "${tag}"
+// 	publishDir params.results, mode: 'copy'
 	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
+// 	memory 1.GB
+// 	cpus 1
+// 	time '10minutes'
 	
-	input:
+// 	input:
 	
 	
-	output:
+// 	output:
 	
 	
-	when:
+// 	when:
 	
 	
-	script:
-	"""
+// 	script:
+// 	"""
 	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
-
-process PROCESS_NAME {
-	
-	// This process does something described here
-	
-	tag "${tag}"
-	publishDir params.results, mode: 'copy'
-	
-	memory 1.GB
-	cpus 1
-	time '10minutes'
-	
-	input:
-	
-	
-	output:
-	
-	
-	when:
-	
-	
-	script:
-	"""
-	
-	"""
-}
+// 	"""
+// }
 
 // --------------------------------------------------------------- //
