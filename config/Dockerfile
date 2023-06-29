@@ -18,11 +18,10 @@ WORKDIR /bbmap
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
     tar -xzf bbmap.tar.gz && \
-    rm bbmap.tar.gz && \
-    ./build.sh
+    rm bbmap.tar.gz
 
 # Add BBTools to PATH
-ENV PATH="/bbmap:${PATH}"
+ENV PATH="/bbmap/bbmap:${PATH}"
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]
