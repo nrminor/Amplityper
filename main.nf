@@ -14,16 +14,16 @@ workflow {
         .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
 	
 	// Workflow steps
-    CLUMP_READS (
+    TRIM_TO_AMPLICONS (
         ch_reads
     )
 
-    // TRIM_TO_AMPLICONS (
-    //     CLUMP_READS.out
-    // )
+    CLUMP_READS (
+        TRIM_TO_AMPLICONS.out
+    )
 
     // MERGE_PAIRS (
-    //     TRIM_TO_AMPLICONS.out
+    //     CLUMP_READS.out
     // )
 
     // MAP_TO_REF (
@@ -91,25 +91,6 @@ workflow {
 // PROCESS SPECIFICATION 
 // --------------------------------------------------------------- //
 
-process CLUMP_READS {
-	
-	tag "${sample_id}"
-	publishDir params.results, mode: 'copy'
-
-    cpus 3
-	
-	input:
-	tuple val(sample_id), path(reads1), path(reads2)
-	
-	output:
-    tuple val(sample_id), path("*.fastq.gz")
-	
-	script:
-	"""
-	clumpify.sh in=${reads1} in2=${reads2} out=${sample_id}_clumped.fastq.gz reorder
-	"""
-}
-
 process TRIM_TO_AMPLICONS {
 	
 	tag "${tag}"
@@ -126,6 +107,25 @@ process TRIM_TO_AMPLICONS {
 	script:
 	"""
 	ampl-BBDuk.py 
+	"""
+}
+
+process CLUMP_READS {
+	
+	tag "${sample_id}"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(reads1)
+	
+	output:
+    tuple val(sample_id), path("*.fastq.gz")
+	
+	script:
+	"""
+	clumpify.sh in=${reads1} out=${sample_id}_clumped.fastq.gz reorder
 	"""
 }
 
