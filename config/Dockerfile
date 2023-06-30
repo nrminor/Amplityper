@@ -16,7 +16,9 @@ RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     pypy-dev \
-    bash
+    bash \
+    samtools \
+    bcftools
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
@@ -32,7 +34,15 @@ RUN apt-get install -y pypy3
 # RUN pypy3 -m pip install biopython argparse
 
 # Install the required Python modules
-RUN pip3 install biopython argparse
+RUN pip3 install biopython argparse pysam
+
+# Download and install SPAdes
+RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
+    tar -xzf SPAdes-3.15.2-Linux.tar.gz && \
+    rm SPAdes-3.15.2-Linux.tar.gz
+
+# Add SPAdes to PATH
+ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]

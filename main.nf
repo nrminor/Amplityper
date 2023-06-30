@@ -37,25 +37,35 @@ workflow {
         MERGE_PAIRS.out
     )
 
-    // MAP_TO_REF (
-    //     CLUMP_READS.out
-    // )
+    MAP_TO_REF (
+        CLUMP_READS.out
+    )
 
-    // TRIM_TO_AMPLICONS (
-    //     MAP_TO_REF.out
-    // )
+    if ( primer_bed ) {
 
-    // EXTRACT_AMPLICON (
-    //     TRIM_TO_AMPLICONS.out
-    // )
+        TRIM_TO_AMPLICONS (
+            MAP_TO_REF.out
+        )
 
-    // BAM_TO_FASTQ (
-    //     EXTRACT_AMPLICON.out
-    // )
+        EXTRACT_AMPLICON (
+            TRIM_TO_AMPLICONS.out
+        )
 
-    // FILTER_BY_LENGTH (
-    //     BAM_TO_FASTQ.out
-    // )
+    } else {
+
+        EXTRACT_AMPLICON (
+            MAP_TO_REF.out
+        )
+
+    }
+
+    BAM_TO_FASTQ (
+        EXTRACT_AMPLICON.out
+    )
+
+    FILTER_BY_LENGTH (
+        BAM_TO_FASTQ.out
+    )
 
     // HAPLOTYPE_ASSEMBLY (
     //     FILTER_BY_LENGTH.out
@@ -73,9 +83,22 @@ workflow {
     //     DOWNSAMPLE_ASSEMBLIES.out
     // )
 
-    // CALL_CONSENSUS_SEQS (
-    //     MAP_TO_REF2.out
-    // )
+    // if ( primer_bed ) {
+
+    //     TRIM_PRIMERS (
+    //         MAP_TO_REF2.out
+    //     )
+
+    //     CALL_CONSENSUS_SEQS (
+    //         TRIM_PRIMERS.out
+    //     )
+    // } else {
+
+    //     CALL_CONSENSUS_SEQS (
+    //         MAP_TO_REF2.out
+    //     )
+
+    // }
 
     // CALL_VARIANTS (
     //     MAP_TO_REF2.out
@@ -107,8 +130,12 @@ workflow {
 // --------------------------------------------------------------- //
 
 process TRIM_TO_MATCHED_PRIMERS {
+
+    /*
+    */
 	
 	tag "${sample_id}"
+    label "general"
 	publishDir params.results, mode: 'copy'
 
 	cpus 1
@@ -126,8 +153,12 @@ process TRIM_TO_MATCHED_PRIMERS {
 }
 
 process MERGE_PAIRS {
+
+    /*
+    */
 	
 	tag "${sample_id}"
+    label "general"
 	publishDir params.results, mode: 'copy'
 
     cpus 3
@@ -145,8 +176,12 @@ process MERGE_PAIRS {
 }
 
 process CLUMP_READS {
+
+    /*
+    */
 	
 	tag "${sample_id}"
+    label "general"
 	publishDir params.results, mode: 'copy'
 
     cpus 3
@@ -163,11 +198,311 @@ process CLUMP_READS {
 	"""
 }
 
-// process PROCESS_NAME {
+process MAP_TO_REF {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+	tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+	bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
+    reformat.sh in=stdin.sam out=${sample_id}.bam 
+	"""
+}
+
+process TRIM_TO_AMPLICONS {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+    tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+	samtools ampliconclip ${params.primer_bed} ${bam}
+	"""
+}
+
+process EXTRACT_AMPLICON {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+    tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+	"""
+}
+
+process BAM_TO_FASTQ {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.fastq.gz")
+	
+	script:
+	"""
+	reformat.sh in=${bam} out=stdout.fastq.gz samplereadstarget=1000000 | \
+	clumpify.sh in=stdin.fastq.gz out=${sample_id}_amplicon_reads.fastq.gz reorder
+	"""
+}
+
+process FILTER_BY_LENGTH {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+	tuple val(sample_id), path("*.fastq.gz")
+	
+	script:
+	"""
+	python script.py ${reads} ${params.primer_bed} ${params.desired_amplicon} | gzip > ${sample_id}_filtered.fastq.gz
+	"""
+}
+
+process HAPLOTYPE_ASSEMBLY {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+	
+	input:
+	
+	
+	output:
+	
+	
+	script:
+	"""
+	
+	"""
+}
+
+// process RECORD_FREQUENCIES {
+
+//     /*
+//     */
+	
+// 	tag "${sample_id}"
+//    label "general"
+// 	publishDir params.results, mode: 'copy'
+	
+// 	input:
+	
+	
+// 	output:
+	
+	
+// 	script:
+// 	"""
+	
+// 	"""
+// }
+
+process DOWNSAMPLE_ASSEMBLIES {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+	samtools view -b -s 0.1 ${bam} > ${sample_id}_downsampled.bam
+	"""
+}
+
+process MAP_TO_REF2 {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+    reformat.sh in=${bam} out=stdout.fastq.gz | \
+	bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
+    reformat.sh in=stdin.sam out=${sample_id}.bam 
+	"""
+}
+
+process TRIM_PRIMERS {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "iVar"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.bam")
+	
+	script:
+	"""
+    ivar trim -b ${params.primer_bed} -p sample_id_trimmed -i ${bam} -q 15 -m 50 -s 4
+	"""
+}
+
+process CALL_CONSENSUS_SEQS {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.fasta")
+	
+	script:
+	"""
+    pileup.sh in=${bam} out=${sample_id}_pileup.txt consensus=${sample_id}_consensus.fasta
+	"""
+}
+
+process CALL_VARIANTS {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.vcf")
+	
+	script:
+	"""
+    bcftools mpileup -Ou -f ${params.reference} ${bam} | bcftools call -mv -Ov -o ${sample_id}.vcf
+	"""
+
+}
+
+process RUN_IVAR {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "iVar"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(bam)
+	
+	output:
+	tuple val(sample_id), path("*.tsv"), path("*.fasta")
+	
+	script:
+	"""
+    samtools mpileup -aa -A -d 600000 -B -Q 0 ${bam} | \
+    tee >(ivar variants -p ${sample_id} -q 20 -t 0.03 -r ${params.reference} -g ${params.gff}) | \
+    ivar consensus -p ${sample_id}_ivar_consensus -q 20 -t 0
+	"""
+
+}
+
+// process GENERATE_REPORT {
 	
 // 	// This process does something described here
 	
-// 	tag "${tag}"
+// 	tag "${sample_id}"
 // 	publishDir params.results, mode: 'copy'
 	
 // 	memory 1.GB
@@ -186,25 +521,6 @@ process CLUMP_READS {
 // 	script:
 // 	"""
 	
-// 	"""
-// }
-
-// process TRIM_TO_AMPLICONS {
-	
-// 	tag "${sample_id}"
-// 	publishDir params.results, mode: 'copy'
-
-// 	cpus 1
-	
-// 	input:
-// 	tuple val(sample_id), path(reads)
-	
-// 	output:
-//     tuple val(sample_id), path("*.fastq.gz")
-	
-// 	script:
-// 	"""
-// 	samtools ampliconclip ${params.primer_bed} ${reads}
 // 	"""
 // }
 
