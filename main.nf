@@ -14,24 +14,39 @@ workflow {
         .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
 	
 	// Workflow steps
-    TRIM_TO_AMPLICONS (
-        ch_reads
-    )
+
+    if ( primer_fasta ) {
+
+        TRIM_TO_MATCHED_PRIMERS (
+            ch_reads
+        )
+
+        MERGE_PAIRS (
+            TRIM_TO_AMPLICONS.out
+        )
+
+    } else {
+
+        MERGE_PAIRS (
+            ch_reads
+        )
+
+    }
 
     CLUMP_READS (
-        TRIM_TO_AMPLICONS.out
+        MERGE_PAIRS.out
     )
 
-    // MERGE_PAIRS (
+    // MAP_TO_REF (
     //     CLUMP_READS.out
     // )
 
-    // MAP_TO_REF (
-    //     MERGE_PAIRS.out
+    // TRIM_TO_AMPLICONS (
+    //     MAP_TO_REF.out
     // )
 
     // EXTRACT_AMPLICON (
-    //     MAP_TO_REF.out
+    //     TRIM_TO_AMPLICONS.out
     // )
 
     // BAM_TO_FASTQ (
@@ -91,22 +106,41 @@ workflow {
 // PROCESS SPECIFICATION 
 // --------------------------------------------------------------- //
 
-process TRIM_TO_AMPLICONS {
+process TRIM_TO_MATCHED_PRIMERS {
 	
-	tag "${tag}"
+	tag "${sample_id}"
 	publishDir params.results, mode: 'copy'
 
 	cpus 1
 	
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), path(reads1), path(reads2)
+	
+	output:
+    tuple val(sample_id), path("*R1_001.fastq.gz"), path("*R2_001.fastq.gz")
+	
+	script:
+	"""
+	ampl-BBDuk.py 
+	"""
+}
+
+process MERGE_PAIRS {
+	
+	tag "${sample_id}"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3
+	
+	input:
+	tuple val(sample_id), path(reads1), path(reads2)
 	
 	output:
     tuple val(sample_id), path("*.fastq.gz")
 	
 	script:
 	"""
-	ampl-BBDuk.py 
+    bbmerge.sh in=${reads1} out=${sample_id}_merged.fastq.gz mix
 	"""
 }
 
@@ -118,14 +152,14 @@ process CLUMP_READS {
     cpus 3
 	
 	input:
-	tuple val(sample_id), path(reads1)
+	tuple val(sample_id), path(reads)
 	
 	output:
     tuple val(sample_id), path("*.fastq.gz")
 	
 	script:
 	"""
-	clumpify.sh in=${reads1} out=${sample_id}_clumped.fastq.gz reorder
+	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz reorder
 	"""
 }
 
@@ -154,5 +188,24 @@ process CLUMP_READS {
 	
 // 	"""
 // }
+
+// process TRIM_TO_AMPLICONS {
+	
+// 	tag "${sample_id}"
+// 	publishDir params.results, mode: 'copy'
+
+// 	cpus 1
+	
+// 	input:
+// 	tuple val(sample_id), path(reads)
+	
+// 	output:
+//     tuple val(sample_id), path("*.fastq.gz")
+	
+// 	script:
+// 	"""
+// 	samtools ampliconclip ${params.primer_bed} ${reads}
+// 	"""
+}
 
 // --------------------------------------------------------------- //
