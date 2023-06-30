@@ -15,7 +15,7 @@ workflow {
 	
 	// Workflow steps
 
-    if ( primer_fasta ) {
+    if ( params.primer_fasta ) {
 
         TRIM_TO_MATCHED_PRIMERS (
             ch_reads
@@ -206,6 +206,6 @@ process CLUMP_READS {
 // 	"""
 // 	samtools ampliconclip ${params.primer_bed} ${reads}
 // 	"""
-}
+// }
 
 // --------------------------------------------------------------- //
