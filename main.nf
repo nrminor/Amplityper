@@ -67,49 +67,49 @@ workflow {
         BAM_TO_FASTQ.out
     )
 
-    // HAPLOTYPE_ASSEMBLY (
-    //     FILTER_BY_LENGTH.out
-    // )
+    HAPLOTYPE_ASSEMBLY (
+        FILTER_BY_LENGTH.out
+    )
 
-    // // RECORD_FREQUENCIES (
-    // //     HAPLOTYPE_ASSEMBLY.out
-    // // )
-
-    // DOWNSAMPLE_ASSEMBLIES (
+    // RECORD_FREQUENCIES (
     //     HAPLOTYPE_ASSEMBLY.out
     // )
 
-    // MAP_TO_REF2 (
-    //     DOWNSAMPLE_ASSEMBLIES.out
-    // )
+    DOWNSAMPLE_ASSEMBLIES (
+        HAPLOTYPE_ASSEMBLY.out
+    )
 
-    // if ( primer_bed ) {
+    MAP_TO_REF2 (
+        DOWNSAMPLE_ASSEMBLIES.out
+    )
 
-    //     TRIM_PRIMERS (
-    //         MAP_TO_REF2.out
-    //     )
+    if ( primer_bed ) {
 
-    //     CALL_CONSENSUS_SEQS (
-    //         TRIM_PRIMERS.out
-    //     )
-    // } else {
+        TRIM_PRIMERS (
+            MAP_TO_REF2.out
+        )
 
-    //     CALL_CONSENSUS_SEQS (
-    //         MAP_TO_REF2.out
-    //     )
+        CALL_CONSENSUS_SEQS (
+            TRIM_PRIMERS.out
+        )
+    } else {
 
-    // }
+        CALL_CONSENSUS_SEQS (
+            MAP_TO_REF2.out
+        )
 
-    // CALL_VARIANTS (
-    //     MAP_TO_REF2.out
-    // )
+    }
 
-    // GENERATE_REPORT (
-    //     DOWNSAMPLE_ASSEMBLIES.out,
-    //     MAP_TO_REF2.out,
-    //     CALL_CONSENSUS_SEQS.out,
-    //     CALL_VARIANTS.out
-    // )
+    CALL_VARIANTS (
+        MAP_TO_REF2.out
+    )
+
+    GENERATE_REPORT (
+        DOWNSAMPLE_ASSEMBLIES.out,
+        MAP_TO_REF2.out,
+        CALL_CONSENSUS_SEQS.out,
+        CALL_VARIANTS.out
+    )
 	
 	
 }
@@ -269,6 +269,7 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
+    extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon}
 	"""
 }
 
@@ -315,7 +316,8 @@ process FILTER_BY_LENGTH {
 	
 	script:
 	"""
-	python script.py ${reads} ${params.primer_bed} ${params.desired_amplicon} | gzip > ${sample_id}_filtered.fastq.gz
+	filter-by-amplicon-length.py ${reads} ${params.primer_bed} ${params.desired_amplicon} \
+    | gzip > ${sample_id}_filtered.fastq.gz
 	"""
 }
 

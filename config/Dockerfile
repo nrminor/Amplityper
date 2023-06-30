@@ -8,17 +8,23 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
+    make \
     wget \
     gzip \
+    pigz \
     zstd \
+    libbz2-dev \
+    zlib1g-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    liblzma-dev \
     default-jre \
     perl \
     python-is-python3 \
     python3-pip \
+    cython \
     pypy-dev \
-    bash \
-    samtools \
-    bcftools
+    bash
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
@@ -28,13 +34,36 @@ RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.t
 # Add BBTools to PATH
 ENV PATH="/bbmap:${PATH}"
 
+# Install HTSLib
+RUN wget https://github.com/samtools/htslib/releases/download/1.9/htslib-1.9.tar.bz2 && \
+    tar -vxjf htslib-1.9.tar.bz2 && \
+    cd htslib-1.9 && \
+    make
+
+# Install SAMTools
+RUN wget https://github.com/samtools/samtools/releases/download/1.9/samtools-1.9.tar.bz2 &&\
+    tar -vxjf samtools-1.9.tar.bz2 && \
+    cd samtools-1.9 && \
+    make
+
+# Install BCFTools
+RUN wget https://github.com/samtools/bcftools/releases/download/1.9/bcftools-1.9.tar.bz2 &&\
+    tar -vxjf bcftools-1.9.tar.bz2 && \
+    cd bcftools-1.9 && \
+    make
+
+# Add the above to PATH
+ENV PATH="$PATH:/usr/bin/htslib-1.9:/usr/bin/bcftools-1.9:/usr/bin/samtools-1.9"
+
 # Install PyPy
 RUN apt-get install -y pypy3
 # RUN pypy3 -m ensurepip
 # RUN pypy3 -m pip install biopython argparse
 
 # Install the required Python modules
-RUN pip3 install biopython argparse
+# RUN pip3 install biopython argparse cython pysam
+RUN export HTSLIB_CONFIGURE_OPTIONS=--enable-plugins && \
+    pip3 install biopython argparse cython pysam
 
 # Download and install SPAdes
 RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
