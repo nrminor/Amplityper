@@ -41,7 +41,7 @@ workflow {
         CLUMP_READS.out
     )
 
-    if ( primer_bed ) {
+    if ( params.primer_bed ) {
 
         TRIM_TO_AMPLICONS (
             MAP_TO_REF.out
@@ -216,10 +216,15 @@ process MAP_TO_REF {
 	tuple val(sample_id), path("*.bam")
 	
 	script:
-	"""
-	bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
-    reformat.sh in=stdin.sam out=${sample_id}.bam 
-	"""
+    if ( params.geneious_mode == true )
+        """
+        echo in development > false.bam
+        """
+    else
+        """
+        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
+        reformat.sh in=stdin.sam out=${sample_id}.bam 
+        """
 }
 
 process TRIM_TO_AMPLICONS {
@@ -322,17 +327,24 @@ process HAPLOTYPE_ASSEMBLY {
 	tag "${sample_id}"
     label "general"
 	publishDir params.results, mode: 'copy'
+
+    cpus 8
 	
 	input:
-	
+	tuple val(sample_id), path(reads)
 	
 	output:
 	
 	
 	script:
-	"""
-	
-	"""
+    if ( params.geneious_mode == true )
+        """
+        echo in development > false.bam
+        """
+    else
+        """
+        spades.py --merged ${reads} --corona --threads ${task.cpus} -o .
+        """
 }
 
 // process RECORD_FREQUENCIES {
@@ -395,11 +407,16 @@ process MAP_TO_REF2 {
 	tuple val(sample_id), path("*.bam")
 	
 	script:
-	"""
-    reformat.sh in=${bam} out=stdout.fastq.gz | \
-	bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
-    reformat.sh in=stdin.sam out=${sample_id}.bam 
-	"""
+	if ( params.geneious_mode == true )
+        """
+        echo in development > false.bam
+        """
+    else
+        """
+        reformat.sh in=${bam} out=stdout.fastq.gz | \
+        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
+        reformat.sh in=stdin.sam out=${sample_id}.bam 
+        """
 }
 
 process TRIM_PRIMERS {

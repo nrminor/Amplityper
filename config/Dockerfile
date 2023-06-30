@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     zstd \
     default-jre \
     perl \
-    python3 \
+    python-is-python3 \
     python3-pip \
     pypy-dev \
     bash \
@@ -34,7 +34,7 @@ RUN apt-get install -y pypy3
 # RUN pypy3 -m pip install biopython argparse
 
 # Install the required Python modules
-RUN pip3 install biopython argparse pysam
+RUN pip3 install biopython argparse
 
 # Download and install SPAdes
 RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
@@ -43,6 +43,7 @@ RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
 
 # Add SPAdes to PATH
 ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
+RUN echo "alias python=python3" >> ~/.bashrc
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]
