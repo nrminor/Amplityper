@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import argparse
 import pysam
@@ -25,7 +26,7 @@ def parse_bed_file(bed_file: str, amplicon_name: str) -> Tuple[str, int, int]:
     with open(bed_file, 'r') as bed:
         for line in bed:
             chrom, start, end, name, num, strand = line.strip().split('\t')
-            if name.contains(amplicon_name):
+            if amplicon_name in name:
                 return chrom, int(start), int(end)
     raise ValueError(f"Amplicon '{amplicon_name}' not found in the BED file.")
 

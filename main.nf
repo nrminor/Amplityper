@@ -246,7 +246,7 @@ process TRIM_TO_AMPLICONS {
 	
 	script:
 	"""
-	samtools ampliconclip ${params.primer_bed} ${bam}
+	samtools ampliconclip -b ${params.primer_bed} ${bam} -o ${sample_id}_clipped.bam
 	"""
 }
 
@@ -269,6 +269,8 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
+    samtools sort ${bam} && \
+    samtools index ${bam} && \
     extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon}
 	"""
 }

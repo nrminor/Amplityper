@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     gcc \
     make \
     wget \
+    curl \
     gzip \
     pigz \
     zstd \
@@ -18,6 +19,8 @@ RUN apt-get update && apt-get install -y \
     libncurses5-dev \
     libncursesw5-dev \
     liblzma-dev \
+    autotools-dev \
+    autoconf \
     default-jre \
     perl \
     python-is-python3 \
@@ -39,21 +42,30 @@ RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.t
     tar -vxjf htslib-1.17.tar.bz2 && \
     rm htslib-1.17.tar.bz2 && \
     cd htslib-1.17 && \
-    make
+    autoreconf -i && \
+    ./configure && \
+    make && \
+    make install
 
 # Install SAMTools
 RUN wget https://github.com/samtools/samtools/releases/download/1.17/samtools-1.17.tar.bz2 &&\
     tar -vxjf samtools-1.17.tar.bz2 && \
     rm samtools-1.17.tar.bz2 && \
     cd samtools-1.17 && \
-    make
+    autoreconf -i && \
+    ./configure && \
+    make && \
+    make install
 
 # Install BCFTools
 RUN wget https://github.com/samtools/bcftools/releases/download/1.17/bcftools-1.17.tar.bz2 &&\
     tar -vxjf bcftools-1.17.tar.bz2 && \
     rm bcftools-1.17.tar.bz2 && \
     cd bcftools-1.17 && \
-    make
+    autoreconf -i && \
+    ./configure && \
+    make && \
+    make install
 
 # Add the above to PATH
 ENV PATH="$PATH:/htslib-1.17:/bcftools-1.17:/samtools-1.17"

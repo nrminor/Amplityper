@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import sys
 import gzip
 from typing import List
@@ -16,7 +17,7 @@ def parse_bed_file(bed_file_path: str, amplicon_name: str) -> int:
     with open(bed_file_path, 'r') as bed_file:
         for line in bed_file:
             chrom, start, end, name, num, strand = line.strip().split('\t')
-            if name.contains(amplicon_name):
+            if amplicon_name in name:
                 amplicon_length = int(end) - int(start)
                 break
     return amplicon_length
