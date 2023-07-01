@@ -242,11 +242,15 @@ process TRIM_TO_AMPLICONS {
 	tuple val(sample_id), path(bam)
 	
 	output:
-    tuple val(sample_id), path("*.bam")
+    tuple val(sample_id), path("*_clipped.bam*")
 	
 	script:
 	"""
-	samtools ampliconclip -b ${params.primer_bed} ${bam} -o ${sample_id}_clipped.bam
+    samtools sort ${bam} && \
+    samtools index ${bam} && \
+	samtools ampliconclip -b ${params.primer_bed} ${bam} -o ${sample_id}_clipped.bam && \
+    samtools sort ${sample_id}_clipped.bam && \
+    samtools index ${sample_id}_clipped.bam
 	"""
 }
 
@@ -269,8 +273,6 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
-    samtools sort ${bam} && \
-    samtools index ${bam} && \
     extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon}
 	"""
 }
