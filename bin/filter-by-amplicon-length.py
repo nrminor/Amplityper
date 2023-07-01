@@ -15,7 +15,7 @@ def parse_bed_file(bed_file_path: str, amplicon_name: str) -> int:
     amplicon_length = None
     with open(bed_file_path, 'r') as bed_file:
         for line in bed_file:
-            chrom, start, end, name = line.strip().split('\t')
+            chrom, start, end, name, num, strand = line.strip().split('\t')
             if name.contains(amplicon_name):
                 amplicon_length = int(end) - int(start)
                 break

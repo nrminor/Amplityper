@@ -83,7 +83,7 @@ workflow {
         DOWNSAMPLE_ASSEMBLIES.out
     )
 
-    if ( primer_bed ) {
+    if ( params.primer_bed ) {
 
         TRIM_PRIMERS (
             MAP_TO_REF2.out
@@ -104,12 +104,12 @@ workflow {
         MAP_TO_REF2.out
     )
 
-    GENERATE_REPORT (
-        DOWNSAMPLE_ASSEMBLIES.out,
-        MAP_TO_REF2.out,
-        CALL_CONSENSUS_SEQS.out,
-        CALL_VARIANTS.out
-    )
+    // GENERATE_REPORT (
+    //     DOWNSAMPLE_ASSEMBLIES.out,
+    //     MAP_TO_REF2.out,
+    //     CALL_CONSENSUS_SEQS.out,
+    //     CALL_VARIANTS.out
+    // )
 	
 	
 }
@@ -336,7 +336,7 @@ process HAPLOTYPE_ASSEMBLY {
 	tuple val(sample_id), path(reads)
 	
 	output:
-	
+	tuple val(sample_id), path(bam)
 	
 	script:
     if ( params.geneious_mode == true )

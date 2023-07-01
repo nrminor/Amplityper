@@ -24,7 +24,7 @@ def parse_bed_file(bed_file: str, amplicon_name: str) -> Tuple[str, int, int]:
     """Parse the BED file and find amplicon coordinates by name."""
     with open(bed_file, 'r') as bed:
         for line in bed:
-            chrom, start, end, name = line.strip().split('\t')
+            chrom, start, end, name, num, strand = line.strip().split('\t')
             if name.contains(amplicon_name):
                 return chrom, int(start), int(end)
     raise ValueError(f"Amplicon '{amplicon_name}' not found in the BED file.")
