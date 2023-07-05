@@ -223,7 +223,7 @@ process MAP_TO_REF {
     else
         """
         bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
-        reformat.sh in=stdin.sam out=${sample_id}.bam 
+        samtools view -bS - > ${sample_id}.bam 
         """
 }
 
@@ -242,15 +242,14 @@ process TRIM_TO_AMPLICONS {
 	tuple val(sample_id), path(bam)
 	
 	output:
-    tuple val(sample_id), path("*_clipped.bam*")
+    tuple val(sample_id), path("*_clipped.bam"), path("*_clipped.bam.bai")
 	
 	script:
 	"""
-    samtools sort ${bam} && \
-    samtools index ${bam} && \
-	samtools ampliconclip -b ${params.primer_bed} ${bam} -o ${sample_id}_clipped.bam && \
-    samtools sort ${sample_id}_clipped.bam && \
-    samtools index ${sample_id}_clipped.bam
+    samtools sort -o ${sample_id}_sorted.bam ${bam} && \
+    samtools index -o ${bam}.bai ${sample_id}_sorted.bam && \
+	samtools ampliconclip -b ${params.primer_bed} ${sample_id}_sorted.bam -o ${sample_id}_clipped.bam && \
+    samtools index -o ${sample_id}_clipped.bam.bai ${sample_id}_clipped.bam
 	"""
 }
 
@@ -266,7 +265,7 @@ process EXTRACT_AMPLICON {
     cpus 3
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(sample_id), path(bam), path(index)
 	
 	output:
     tuple val(sample_id), path("*.bam")
