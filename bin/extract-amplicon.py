@@ -34,6 +34,7 @@ def parse_bed_file(bed_file: str, amplicon_name: str) -> Tuple[str, int, int]:
 def extract_mapped_reads(bam_file: str, chrom: str, start: int, end: int) -> List[pysam.AlignedSegment]:
     """Extract mapped reads within the specified amplicon coordinates."""
     bam = pysam.AlignmentFile(bam_file, "rb")
+    assert chrom in bam.references, f"Contig '{chrom}' not found in the BAM file."
     mapped_reads = [read for read in bam.fetch(chrom, start, end) if not read.is_unmapped]
     bam.close()
     return mapped_reads
