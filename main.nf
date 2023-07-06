@@ -218,7 +218,7 @@ process MAP_TO_REF {
 	script:
     if ( params.geneious_mode == true )
         """
-        echo in development > false.bam
+        geneious -i ${params.reference} ${reads} –operation Map_to_Reference -o ${sample_id}.bam
         """
     else
         """
@@ -344,7 +344,7 @@ process HAPLOTYPE_ASSEMBLY {
 	script:
     if ( params.geneious_mode == true )
         """
-        echo in development > false.bam
+        geneious -i ${reads} –operation de_novo_assemble -x ${params.assembly_profile} -o ${sample_id}.bam
         """
     else
         """
