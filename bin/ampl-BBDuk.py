@@ -154,140 +154,144 @@ def dict_to_grouped_fastas(grouped_fasta_dir, grouped_fasta_dict):
 ### RUNNING THE WORKFLOW ###
 ### ------------------------------------------------------------------------------ ###
 
-# get the arguments
-args = get_process_arrays_args()
+def main():
+    # get the arguments
+    args = get_process_arrays_args()
 
-# save arguments to global variables by same names
-primer_fasta = args.primer_fasta
-in_path = args.in_path
-in2_path = args.in2_path
-outm = args.outm
-outm2 = args.outm2
-temp_dir = args.temp_dir
-mem = args.mem
-bbmap_dir = args.bbmap_dir
-ktrim = args.ktrim
-if temp_dir is None:
-    temp_dir = os.path.join(os.path.dirname(outm), 'TMP')
+    # save arguments to global variables by same names
+    primer_fasta = args.primer_fasta
+    in_path = args.in_path
+    in2_path = args.in2_path
+    outm = args.outm
+    outm2 = args.outm2
+    temp_dir = args.temp_dir
+    mem = args.mem
+    bbmap_dir = args.bbmap_dir
+    ktrim = args.ktrim
+    if temp_dir is None:
+        temp_dir = os.path.join(os.path.dirname(outm), 'TMP')
 
-# create the required directories for outputting files
-os.makedirs(temp_dir, exist_ok=True)
-grouped_fasta_dir = os.path.join(temp_dir,'single_fasta')
-os.makedirs(grouped_fasta_dir, exist_ok=True)
+    # create the required directories for outputting files
+    os.makedirs(temp_dir, exist_ok=True)
+    grouped_fasta_dir = os.path.join(temp_dir,'single_fasta')
+    os.makedirs(grouped_fasta_dir, exist_ok=True)
 
-# Create grouped fasta files for the forward and reverse primer pairs.
-# create an iterable dictionary of paths.
-grouped_fasta_dict = fasta_groups_to_dict(primer_fasta)
-primer_group_path_dict = dict_to_grouped_fastas(grouped_fasta_dir, grouped_fasta_dict)
-print('Primer Group Count:', len(primer_group_path_dict.keys()))
+    # Create grouped fasta files for the forward and reverse primer pairs.
+    # create an iterable dictionary of paths.
+    grouped_fasta_dict = fasta_groups_to_dict(primer_fasta)
+    primer_group_path_dict = dict_to_grouped_fastas(grouped_fasta_dir, grouped_fasta_dict)
+    print('Primer Group Count:', len(primer_group_path_dict.keys()))
 
-left_outpath_list = []
-right_outpath_list = []
-primer_group_count = len(primer_group_path_dict.keys())
-primer_group_count = len(primer_group_path_dict.keys())
-i = 1
-for primer_group, primer_dict in primer_group_path_dict.items():
-    print('Processing Primer Group {0} of {1} -- name:{2}'.format(i, primer_group_count, primer_group))
-    # create intermediate/temporary file names to be used by bbduk and repair sh to conduct the primer matching
-    i += 1
-    in_fasta_left_path = primer_dict['LEFT']
-    base_left_fasta = os.path.basename(in_fasta_left_path)[:-6]
-    in_fasta_right_path = primer_dict['RIGHT']
-    base_right_fasta = os.path.basename(in_fasta_right_path)[:-6]
-    fasta_left_temp_1 = os.path.join(temp_dir, '{}_temp_1.fastq.gz'.format(base_left_fasta))
-    fasta_left_temp_2 = os.path.join(temp_dir, '{}_temp_2.fastq.gz'.format(base_left_fasta))
-    fasta_left_temp_3 = os.path.join(temp_dir, '{}_temp3.fastq.gz'.format(base_left_fasta))
-    left_outpath_list.append(fasta_left_temp_3)
-    fasta_right_temp_1 = os.path.join(temp_dir, '{}_temp_1.fastq.gz'.format(base_right_fasta))
-    fasta_right_temp_2 = os.path.join(temp_dir, '{}_temp_2.fastq.gz'.format(base_right_fasta))
-    fasta_right_temp_3 = os.path.join(temp_dir, '{}_temp3.fastq.gz'.format(base_right_fasta))
-    right_outpath_list.append(fasta_right_temp_3)
-    # run bbduk on the forward primer set of the group
-    print('Running bbduk left: ', primer_group)
-    ssh_cmd_out = subprocess_run(['java', '-ea',
-                                '-Xmx{0}m'.format(mem),
-                                '-Xms{0}m'.format(mem),
-                                '-cp', '{0}/current/'.format(bbmap_dir),
-                                'jgi.BBDuk',
-                                'in={}'.format(in_path),
-                                'in2={}'.format(in2_path),
-                                'outm={}'.format(fasta_left_temp_1),
-                                'outm2={}'.format(fasta_right_temp_1),
-                                'ref={0}'.format(in_fasta_left_path),
-                                'ktrim={}'.format(ktrim),
-                                'k=21',
-                                'qtrim=f',
-                                'trimq=30',
-                                'hdist=3',
-                                'rcomp=f',
-                                'minlength=75',
-                                'restrictleft=32',
-                                'requireBothBad=f',
-                                'overwrite=t'],
-                                shell=False,
-                                stdout=PIPE,
-                                stderr=PIPE)
-    # import os
-    os.write(1, ssh_cmd_out.stderr)
-    # run repair again as the threads can put the reads out of order and will be missing in bbduk
-    # print('Running repair left: ', primer_group)
-    # ssh_cmd_out = subprocess_run(['{0}/repair.sh'.format(bbmap_dir),
-    #                               'in={}'.format(fasta_left_temp_1),
-    #                               'in2={}'.format(in2_path),
-    #                               'out={}'.format(fasta_left_temp_2),
-    #                               'out2={}'.format(fasta_right_temp_1)],
-    #                              shell=False,
-    #                              stdout=PIPE,
-    #                              stderr=PIPE)
-    # print(ssh_cmd_out)
-    # Run bbduk on the reversecomplement matched pair primer of the group
-    print('Running bbduk right: ', primer_group)
-    ssh_cmd_out = subprocess_run(['java', '-ea',
-                                '-Xmx{0}m'.format(mem),
-                                '-Xms{0}m'.format(mem),
-                                '-cp', '{0}/current/'.format(bbmap_dir),
-                                'jgi.BBDuk',
-                                'in={}'.format(fasta_left_temp_1),
-                                'in2={}'.format(fasta_right_temp_1),
-                                'outm={}'.format(fasta_left_temp_3),
-                                'outm2={}'.format(fasta_right_temp_3),
-                                'ref={0}'.format(in_fasta_right_path),
-                                'ktrim={}'.format(ktrim),
-                                'k=21',
-                                'qtrim=f',
-                                'trimq=30',
-                                'hdist=3',
-                                'rcomp=f',
-                                'minlength=75',
-                                'restrictleft=32',
-                                'requireBothBad=f',
-                                'overwrite=t'],
-                                shell=False,
-                                stdout=PIPE,
-                                stderr=PIPE)
-    os.write(1, ssh_cmd_out.stderr)
-    # run repair again as the threads can put the reads out of order and will be missing in bbduk
-    # print('Running repair right: ', primer_group)
-    # ssh_cmd_out = subprocess_run(['{0}/repair.sh'.format(bbmap_dir),
-    #                               'in={}'.format(fasta_left_temp_2),
-    #                               'in2={}'.format(fasta_right_temp_2),
-    #                               'out={}'.format(fasta_left_temp_3),
-    #                               'out2={}'.format(fasta_right_temp_3)],
-    #                              shell=False,
-    #                              stdout=PIPE,
-    #                              stderr=PIPE)
-    # print(ssh_cmd_out)
+    left_outpath_list = []
+    right_outpath_list = []
+    primer_group_count = len(primer_group_path_dict.keys())
+    primer_group_count = len(primer_group_path_dict.keys())
+    i = 1
+    for primer_group, primer_dict in primer_group_path_dict.items():
+        print('Processing Primer Group {0} of {1} -- name:{2}'.format(i, primer_group_count, primer_group))
+        # create intermediate/temporary file names to be used by bbduk and repair sh to conduct the primer matching
+        i += 1
+        in_fasta_left_path = primer_dict['LEFT']
+        base_left_fasta = os.path.basename(in_fasta_left_path)[:-6]
+        in_fasta_right_path = primer_dict['RIGHT']
+        base_right_fasta = os.path.basename(in_fasta_right_path)[:-6]
+        fasta_left_temp_1 = os.path.join(temp_dir, '{}_temp_1.fastq.gz'.format(base_left_fasta))
+        fasta_left_temp_2 = os.path.join(temp_dir, '{}_temp_2.fastq.gz'.format(base_left_fasta))
+        fasta_left_temp_3 = os.path.join(temp_dir, '{}_temp3.fastq.gz'.format(base_left_fasta))
+        left_outpath_list.append(fasta_left_temp_3)
+        fasta_right_temp_1 = os.path.join(temp_dir, '{}_temp_1.fastq.gz'.format(base_right_fasta))
+        fasta_right_temp_2 = os.path.join(temp_dir, '{}_temp_2.fastq.gz'.format(base_right_fasta))
+        fasta_right_temp_3 = os.path.join(temp_dir, '{}_temp3.fastq.gz'.format(base_right_fasta))
+        right_outpath_list.append(fasta_right_temp_3)
+        # run bbduk on the forward primer set of the group
+        print('Running bbduk left: ', primer_group)
+        ssh_cmd_out = subprocess_run(['java', '-ea',
+                                    '-Xmx{0}m'.format(mem),
+                                    '-Xms{0}m'.format(mem),
+                                    '-cp', '{0}/current/'.format(bbmap_dir),
+                                    'jgi.BBDuk',
+                                    'in={}'.format(in_path),
+                                    'in2={}'.format(in2_path),
+                                    'outm={}'.format(fasta_left_temp_1),
+                                    'outm2={}'.format(fasta_right_temp_1),
+                                    'ref={0}'.format(in_fasta_left_path),
+                                    'ktrim={}'.format(ktrim),
+                                    'k=21',
+                                    'qtrim=f',
+                                    'trimq=30',
+                                    'hdist=3',
+                                    'rcomp=f',
+                                    'minlength=75',
+                                    'restrictleft=32',
+                                    'requireBothBad=f',
+                                    'overwrite=t'],
+                                    shell=False,
+                                    stdout=PIPE,
+                                    stderr=PIPE)
+        # import os
+        os.write(1, ssh_cmd_out.stderr)
+        # run repair again as the threads can put the reads out of order and will be missing in bbduk
+        # print('Running repair left: ', primer_group)
+        # ssh_cmd_out = subprocess_run(['{0}/repair.sh'.format(bbmap_dir),
+        #                               'in={}'.format(fasta_left_temp_1),
+        #                               'in2={}'.format(in2_path),
+        #                               'out={}'.format(fasta_left_temp_2),
+        #                               'out2={}'.format(fasta_right_temp_1)],
+        #                              shell=False,
+        #                              stdout=PIPE,
+        #                              stderr=PIPE)
+        # print(ssh_cmd_out)
+        # Run bbduk on the reversecomplement matched pair primer of the group
+        print('Running bbduk right: ', primer_group)
+        ssh_cmd_out = subprocess_run(['java', '-ea',
+                                    '-Xmx{0}m'.format(mem),
+                                    '-Xms{0}m'.format(mem),
+                                    '-cp', '{0}/current/'.format(bbmap_dir),
+                                    'jgi.BBDuk',
+                                    'in={}'.format(fasta_left_temp_1),
+                                    'in2={}'.format(fasta_right_temp_1),
+                                    'outm={}'.format(fasta_left_temp_3),
+                                    'outm2={}'.format(fasta_right_temp_3),
+                                    'ref={0}'.format(in_fasta_right_path),
+                                    'ktrim={}'.format(ktrim),
+                                    'k=21',
+                                    'qtrim=f',
+                                    'trimq=30',
+                                    'hdist=3',
+                                    'rcomp=f',
+                                    'minlength=75',
+                                    'restrictleft=32',
+                                    'requireBothBad=f',
+                                    'overwrite=t'],
+                                    shell=False,
+                                    stdout=PIPE,
+                                    stderr=PIPE)
+        os.write(1, ssh_cmd_out.stderr)
+        # run repair again as the threads can put the reads out of order and will be missing in bbduk
+        # print('Running repair right: ', primer_group)
+        # ssh_cmd_out = subprocess_run(['{0}/repair.sh'.format(bbmap_dir),
+        #                               'in={}'.format(fasta_left_temp_2),
+        #                               'in2={}'.format(fasta_right_temp_2),
+        #                               'out={}'.format(fasta_left_temp_3),
+        #                               'out2={}'.format(fasta_right_temp_3)],
+        #                              shell=False,
+        #                              stdout=PIPE,
+        #                              stderr=PIPE)
+        # print(ssh_cmd_out)
 
-# concatenate the  primer grouped fastq files into a single file for each direction
-print('Concatenating files to create a single file')
-with gzip.open(outm, 'wt') as out_file:
-    for left_outpath in left_outpath_list:
-        concat_fastq_gz(left_outpath, out_file)
-        print(left_outpath)
+    # concatenate the  primer grouped fastq files into a single file for each direction
+    print('Concatenating files to create a single file')
+    with gzip.open(outm, 'wt') as out_file:
+        for left_outpath in left_outpath_list:
+            concat_fastq_gz(left_outpath, out_file)
+            print(left_outpath)
 
-with gzip.open(outm2, 'wt') as out_file:
-    for right_outpath in right_outpath_list:
-        concat_fastq_gz(right_outpath, out_file)
-        print(right_outpath)
+    with gzip.open(outm2, 'wt') as out_file:
+        for right_outpath in right_outpath_list:
+            concat_fastq_gz(right_outpath, out_file)
+            print(right_outpath)
+
+if __name__ == "__main__":
+    main()
 
 ### ------------------------------------------------------------------------------ ###
