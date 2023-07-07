@@ -138,7 +138,7 @@ process TRIM_TO_MATCHED_PRIMERS {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-	cpus 1
+    cpus params.available_cpus
 	
 	input:
 	tuple val(sample_id), path(reads1), path(reads2)
@@ -161,18 +161,18 @@ process MERGE_PAIRS {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+    cpus params.available_cpus
 	
 	input:
 	tuple val(sample_id), path(reads1), path(reads2)
 	
 	output:
     tuple val(sample_id), path("*_merged.fastq.gz"), emit: merged
-    path "_unmerged.fastq.gz", emit: unmerged
+    path "*_unmerged.fastq.gz", emit: unmerged
 	
 	script:
 	"""
-    bbmerge.sh in1=${reads1} in2=${reads2} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz
+    bbmerge.sh in1=${reads1} in2=${reads2} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz t=${task.cpus}
 	"""
 }
 
@@ -185,7 +185,7 @@ process CLUMP_READS {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+    cpus params.available_cpus
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -195,7 +195,7 @@ process CLUMP_READS {
 	
 	script:
 	"""
-	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz reorder
+	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz t=${task.cpus} reorder
 	"""
 }
 
@@ -208,7 +208,7 @@ process MAP_TO_REF {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+    cpus params.available_cpus
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -223,7 +223,7 @@ process MAP_TO_REF {
         """
     else
         """
-        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
+        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} | \
         samtools view -bS - > ${sample_id}.bam 
         """
 }
@@ -287,7 +287,7 @@ process BAM_TO_FASTQ {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+    cpus params.available_cpus
 	
 	input:
 	tuple val(sample_id), path(bam)
@@ -297,8 +297,8 @@ process BAM_TO_FASTQ {
 	
 	script:
 	"""
-	reformat.sh in=${bam} out=stdout.fastq.gz samplereadstarget=1000000 | \
-	clumpify.sh in=stdin.fastq.gz out=${sample_id}_amplicon_reads.fastq.gz reorder
+	reformat.sh in=${bam} out=stdout.fastq.gz samplereadstarget=1000000 t=${task.cpus} | \
+	clumpify.sh in=stdin.fastq.gz out=${sample_id}_amplicon_reads.fastq.gz t=${task.cpus} reorder
 	"""
 }
 
