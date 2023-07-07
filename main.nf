@@ -34,7 +34,7 @@ workflow {
     }
 
     CLUMP_READS (
-        MERGE_PAIRS.out
+        MERGE_PAIRS.out.merged
     )
 
     MAP_TO_REF (
@@ -167,11 +167,12 @@ process MERGE_PAIRS {
 	tuple val(sample_id), path(reads1), path(reads2)
 	
 	output:
-    tuple val(sample_id), path("*.fastq.gz")
+    tuple val(sample_id), path("*_merged.fastq.gz"), emit: merged
+    path "_unmerged.fastq.gz", emit: unmerged
 	
 	script:
 	"""
-    bbmerge.sh in=${reads1} out=${sample_id}_merged.fastq.gz mix
+    bbmerge.sh in=${reads1} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz
 	"""
 }
 
@@ -273,7 +274,7 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
-    extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon}
+    extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon} ${params.fwd_suffix} ${params.rev_suffix}
 	"""
 }
 
