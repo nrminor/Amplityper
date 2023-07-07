@@ -41,23 +41,27 @@ workflow {
         CLUMP_READS.out
     )
 
-    if ( params.primer_bed ) {
+    // if ( params.primer_bed ) {
 
-        TRIM_TO_AMPLICONS (
-            MAP_TO_REF.out
-        )
+    //     TRIM_TO_AMPLICONS (
+    //         MAP_TO_REF.out
+    //     )
 
-        EXTRACT_AMPLICON (
-            TRIM_TO_AMPLICONS.out
-        )
+    //     EXTRACT_AMPLICON (
+    //         TRIM_TO_AMPLICONS.out
+    //     )
 
-    } else {
+    //     EXTRACT_AMPLICON (
+    //         MAP_TO_REF.out
+    //     )
 
-        EXTRACT_AMPLICON (
-            MAP_TO_REF.out
-        )
+    // } else {
 
-    }
+    EXTRACT_AMPLICON (
+        MAP_TO_REF.out
+    )
+
+    // }
 
     BAM_TO_FASTQ (
         EXTRACT_AMPLICON.out
