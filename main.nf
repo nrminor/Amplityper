@@ -172,7 +172,7 @@ process MERGE_PAIRS {
 	
 	script:
 	"""
-    bbmerge.sh in=${reads1} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz
+    bbmerge.sh in1=${reads1} in2=${reads2} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz
 	"""
 }
 
