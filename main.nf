@@ -222,7 +222,7 @@ process MAP_TO_REF {
 	tuple val(sample_id), path(reads)
 	
 	output:
-	tuple val(sample_id), path("*.bam")
+	tuple val(sample_id), stdout
 	
 	script:
     if ( params.geneious_mode == true )
@@ -231,8 +231,7 @@ process MAP_TO_REF {
         """
     else
         """
-        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} | \
-        samtools view -bS - > ${sample_id}.bam 
+        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} 
         """
 }
 
@@ -248,18 +247,16 @@ process TRIM_TO_AMPLICONS {
     cpus 3
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(sample_id), stdin
 	
 	output:
     tuple val(sample_id), path("*sorted_clipped.bam"), path("*sorted_clipped.bam.bai")
 	
 	script:
 	"""
-    samtools sort -o ${sample_id}_sorted.bam ${bam} && \
-    samtools index -o ${bam}.bai ${sample_id}_sorted.bam && \
-	samtools ampliconclip -b ${params.primer_bed} ${sample_id}_sorted.bam -o ${sample_id}_clipped.bam && \
-    samtools sort -o ${sample_id}_sorted_clipped.bam ${sample_id}_clipped.bam && \
-    samtools index -o ${sample_id}_sorted_clipped.bam.bai ${sample_id}_sorted_clipped.bam
+    samtools sort -o ${sample_id}_sorted.bam - && \
+    samtools index -o ${bam}_sorted.bai ${sample_id}_sorted.bam && \
+	samtools ampliconclip -b ${params.primer_bed} ${sample_id}_sorted.bam -o ${sample_id}_clipped.bam
 	"""
 }
 
@@ -275,14 +272,14 @@ process SORT_AND_INDEX {
     cpus 3 
 
     input:
-    tuple val(sample_id), path(bam)
+    tuple val(sample_id), stdin
 
     output:
     tuple val(sample_id), path("*.bam"), path("*.bam.bai")
 
     script:
     """
-    samtools sort -o ${sample_id}_sorted.bam ${bam} && \
+    samtools view -bS - | samtools sort -o ${sample_id}_sorted.bam - && \
     samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
     """
 

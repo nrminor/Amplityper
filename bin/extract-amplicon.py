@@ -113,7 +113,7 @@ def main():
     trimmed_extracts = trim_mapped_reads(extracted_reads, start, end)
 
     # Write mapped reads to a new BAM file
-    output_bam = f"{amplicon_name}_mapped_reads.bam"
+    output_bam = f"{amplicon_name}_extracted_reads.bam"
     write_mapped_reads_to_bam(trimmed_extracts, output_bam)
     print(f"Extracted mapped reads written to {output_bam}")
 
