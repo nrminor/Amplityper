@@ -31,13 +31,13 @@ def parse_bed_file(bed_file: str, amplicon_name: str, fwd_primer: str, rev_prime
         amplicon_end = None
         
         for line in bed:
-            chrom, start, end, name, num, strand = line.strip().split('\t')
+            chrom, start, end, name = line.strip().split('\t')[0:3]
             if amplicon_name in name and fwd_primer in name:
                 ref = chrom
-                amplicon_start = int(end)
+                amplicon_start = int(start)
                 continue
             elif amplicon_name in name and rev_primer in name:
-                amplicon_end = int(start)
+                amplicon_end = int(end)
             if ref is not None and amplicon_start is not None and amplicon_end is not None:
                 break
             
@@ -54,7 +54,11 @@ def extract_mapped_reads(bam_file: str, chrom: str, start: int, end: int) -> Lis
     
     mapped_reads = []
     for read in bam.fetch(chrom, start, end):
-        if not read.is_unmapped and read.reference_start >= start and read.reference_end <= end:
+        if not read.is_unmapped and (
+                (read.reference_start >= start and read.reference_end <= end) or
+                (read.reference_start <= start and read.reference_end >= start) or
+                (read.reference_start <= end and read.reference_end >= end)
+            ):
             # Filter out reads that align outside the amplicon coordinates or that have 
             # "junction" annotations
             if "junction" not in read.query_name:
@@ -62,6 +66,24 @@ def extract_mapped_reads(bam_file: str, chrom: str, start: int, end: int) -> Lis
     
     bam.close()
     return mapped_reads
+
+
+def trim_mapped_reads(mapped_reads: List[pysam.AlignedSegment], start: int, end: int) -> List[pysam.AlignedSegment]:
+    """Trim mapped reads to the amplicon coordinates."""
+    trimmed_reads = []
+    for read in mapped_reads:
+        if read.reference_start < start:
+            # Adjust the read's start position to the amplicon start
+            read.query_sequence = read.query_sequence[start - read.reference_start:]
+            read.query_qualities = read.query_qualities[start - read.reference_start:]
+            read.reference_start = start
+        if read.reference_end > end:
+            # Adjust the read's end position to the amplicon end
+            read.query_sequence = read.query_sequence[:end - read.reference_start]
+            read.query_qualities = read.query_qualities[:end - read.reference_start]
+            read.reference_end = end
+        trimmed_reads.append(read)
+    return trimmed_reads
 
 
 def write_mapped_reads_to_bam(mapped_reads: List[pysam.AlignedSegment], output_bam: str):
@@ -85,11 +107,14 @@ def main():
     chrom, start, end = parse_bed_file(bed_file, amplicon_name, fwd_primer, rev_primer)
 
     # Extract mapped reads within amplicon coordinates
-    mapped_reads = extract_mapped_reads(bam_file, chrom, start, end)
+    extracted_reads = extract_mapped_reads(bam_file, chrom, start, end)
+
+    # trim extracted reads to the amplicon
+    trimmed_extracts = trim_mapped_reads(extracted_reads, start, end)
 
     # Write mapped reads to a new BAM file
     output_bam = f"{amplicon_name}_mapped_reads.bam"
-    write_mapped_reads_to_bam(mapped_reads, output_bam)
+    write_mapped_reads_to_bam(trimmed_extracts, output_bam)
     print(f"Extracted mapped reads written to {output_bam}")
 
 
