@@ -57,8 +57,12 @@ workflow {
 
     // } else {
 
-    EXTRACT_AMPLICON (
+    SORT_AND_INDEX (
         MAP_TO_REF.out
+    )
+
+    EXTRACT_AMPLICON (
+        SORT_AND_INDEX.out
     )
 
     // }
@@ -259,6 +263,31 @@ process TRIM_TO_AMPLICONS {
 	"""
 }
 
+process SORT_AND_INDEX {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+    cpus 3 
+
+    input:
+    tuple val(sample_id), path(bam)
+
+    output:
+    tuple val(sample_id), path("*.bam"), path("*.bam.bai")
+
+    script:
+    """
+    samtools sort -o ${sample_id}_sorted.bam ${bam} && \
+    samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
+    """
+
+}
+
 process EXTRACT_AMPLICON {
 
     /*
@@ -278,7 +307,7 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
-    extract-amplicon.py ${bam} ${params.primer_bed} ${params.desired_amplicon} ${params.fwd_suffix} ${params.rev_suffix}
+    extract-amplicon.py ${sample_id}_sorted.bam ${params.primer_bed} ${params.desired_amplicon} ${params.fwd_suffix} ${params.rev_suffix}
 	"""
 }
 
