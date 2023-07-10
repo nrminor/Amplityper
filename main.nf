@@ -231,7 +231,8 @@ process MAP_TO_REF {
         """
     else
         """
-        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} 
+        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} | \
+        samtools view -bS - 
         """
 }
 
