@@ -57,12 +57,8 @@ workflow {
 
     // } else {
 
-    SORT_AND_INDEX (
-        MAP_TO_REF.out
-    )
-
     EXTRACT_AMPLICON (
-        SORT_AND_INDEX.out
+        MAP_TO_REF.out
     )
 
     // }
@@ -214,7 +210,7 @@ process MAP_TO_REF {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	// publishDir params.results, mode: 'copy'
 
     cpus params.available_cpus
 	
@@ -222,7 +218,7 @@ process MAP_TO_REF {
 	tuple val(sample_id), path(reads)
 	
 	output:
-	tuple val(sample_id), stdout
+	tuple val(sample_id), path("*.bam"), path("*.bam.bai")
 	
 	script:
     if ( params.geneious_mode == true )
@@ -232,7 +228,8 @@ process MAP_TO_REF {
     else
         """
         bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam t=${task.cpus} | \
-        samtools view -bS - 
+        samtools sort -o ${sample_id}_sorted.bam - && \
+        samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
         """
 }
 
@@ -259,31 +256,6 @@ process TRIM_TO_AMPLICONS {
     samtools index -o ${bam}_sorted.bai ${sample_id}_sorted.bam && \
 	samtools ampliconclip -b ${params.primer_bed} ${sample_id}_sorted.bam -o ${sample_id}_clipped.bam
 	"""
-}
-
-process SORT_AND_INDEX {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "general"
-	publishDir params.results, mode: 'copy'
-
-    cpus 3 
-
-    input:
-    tuple val(sample_id), stdin
-
-    output:
-    tuple val(sample_id), path("*.bam"), path("*.bam.bai")
-
-    script:
-    """
-    samtools view -bS - | samtools sort -o ${sample_id}_sorted.bam - && \
-    samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
-    """
-
 }
 
 process EXTRACT_AMPLICON {
