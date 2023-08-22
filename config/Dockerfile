@@ -67,6 +67,15 @@ RUN wget https://github.com/samtools/bcftools/releases/download/1.17/bcftools-1.
     make && \
     make install
 
+# Install bedtools
+RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools-2.31.0.tar.gz && \
+    tar -xzf bedtools-2.31.0.tar.gz && \
+    cd bedtools2 && \
+    make && \
+    make install && \
+    cd .. && \
+    rm -rf bedtools2 bedtools-2.31.0.tar.gz
+
 # Add the above to PATH
 ENV PATH="$PATH:/htslib-1.17:/bcftools-1.17:/samtools-1.17"
 

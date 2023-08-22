@@ -210,7 +210,7 @@ process MAP_TO_REF {
 	
 	tag "${sample_id}"
     label "general"
-	// publishDir params.results, mode: 'copy'
+	publishDir params.results, mode: 'copy'
 
     cpus params.available_cpus
 	
@@ -277,8 +277,10 @@ process EXTRACT_AMPLICON {
 	
 	script:
 	"""
-    extract-amplicon.py ${sample_id}_sorted.bam ${params.primer_bed} ${params.desired_amplicon} ${params.fwd_suffix} ${params.rev_suffix}
-	"""
+    grep ${params.desired_amplicon} ${params.primer_bed} > amplicon-primers.bed && \
+    bedtools merge -d 300 -i amplicon-primers.bed > amplicon-only.bed && \
+    bedtools intersect -a ${bam} -b amplicon-only.bed > ${sample_id}_extracted_reads.bam
+    """
 }
 
 process BAM_TO_FASTQ {
