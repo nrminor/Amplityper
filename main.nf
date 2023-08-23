@@ -12,26 +12,23 @@ workflow {
 	// input channels
 	ch_reads = Channel
         .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
+
+    ch_primer_bed = Channel
+        .fromPath( params.primer_bed )
 	
 	// Workflow steps
+    GET_PRIMER_SEQS (
+        ch_primer_bed
+    )
+    
+    TRIM_TO_MATCHED_PRIMERS (
+        ch_reads,
+        GET_PRIMER_SEQS.out
+    )
 
-    if ( params.primer_fasta ) {
-
-        TRIM_TO_MATCHED_PRIMERS (
-            ch_reads
-        )
-
-        MERGE_PAIRS (
-            TRIM_TO_AMPLICONS.out
-        )
-
-    } else {
-
-        MERGE_PAIRS (
-            ch_reads
-        )
-
-    }
+    MERGE_PAIRS (
+        TRIM_TO_MATCHED_PRIMERS.out
+    )
 
     CLUMP_READS (
         MERGE_PAIRS.out.merged
@@ -41,27 +38,9 @@ workflow {
         CLUMP_READS.out
     )
 
-    // if ( params.primer_bed ) {
-
-    //     TRIM_TO_AMPLICONS (
-    //         MAP_TO_REF.out
-    //     )
-
-    //     EXTRACT_AMPLICON (
-    //         TRIM_TO_AMPLICONS.out
-    //     )
-
-    //     EXTRACT_AMPLICON (
-    //         MAP_TO_REF.out
-    //     )
-
-    // } else {
-
     EXTRACT_AMPLICON (
         MAP_TO_REF.out
     )
-
-    // }
 
     BAM_TO_FASTQ (
         EXTRACT_AMPLICON.out
@@ -133,6 +112,26 @@ workflow {
 // PROCESS SPECIFICATION 
 // --------------------------------------------------------------- //
 
+process GET_PRIMER_SEQS {
+
+    /*
+    */
+
+    label "general"
+
+    input:
+    path bed_file
+
+    output:
+    path "*.fasta"
+
+    script:
+    """
+    bedtools getfasta -fi ${params.reference} -bed ${bed_file} -fo primer_seqs.fasta
+    """
+
+}
+
 process TRIM_TO_MATCHED_PRIMERS {
 
     /*
@@ -146,13 +145,19 @@ process TRIM_TO_MATCHED_PRIMERS {
 	
 	input:
 	tuple val(sample_id), path(reads1), path(reads2)
+    path primer_fasta
 	
 	output:
-    tuple val(sample_id), path("*R1_001.fastq.gz"), path("*R2_001.fastq.gz")
+    tuple val(sample_id), path("*reads1.fastq.gz"), path("*reads2.fastq.gz")
 	
 	script:
 	"""
-	ampl-BBDuk.py 
+	ampl-BBDuk.py \
+    --primer_fasta ${primer_fasta} \
+    --in_path ${reads1} \
+    --in2_path ${reads2} \
+    --outm amplicon_reads1.fastq.gz \
+    --outm2 amplicon_reads1.fastq.gz
 	"""
 }
 
@@ -176,7 +181,9 @@ process MERGE_PAIRS {
 	
 	script:
 	"""
-    bbmerge.sh in1=${reads1} in2=${reads2} out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz t=${task.cpus}
+    bbmerge.sh in1=${reads1} in2=${reads2} \
+    out=${sample_id}_merged.fastq.gz outu=${sample_id}_unmerged.fastq.gz \
+    t=${task.cpus}
 	"""
 }
 
@@ -223,7 +230,7 @@ process MAP_TO_REF {
 	script:
     if ( params.geneious_mode == true )
         """
-        geneious -i ${params.reference} ${reads} –operation Map_to_Reference -o ${sample_id}.bam
+        geneious -i ${params.reference} ${reads} -operation Map_to_Reference -o ${sample_id}.bam
         """
     else
         """
@@ -302,7 +309,7 @@ process BAM_TO_FASTQ {
 	
 	script:
 	"""
-	reformat.sh in=${bam} out=stdout.fastq.gz samplereadstarget=1000000 t=${task.cpus} | \
+	reformat.sh in=${bam} out=stdout.fastq.gz t=${task.cpus} | \
 	clumpify.sh in=stdin.fastq.gz out=${sample_id}_amplicon_reads.fastq.gz t=${task.cpus} reorder
 	"""
 }
@@ -327,7 +334,7 @@ process FILTER_BY_LENGTH {
 	script:
 	"""
 	filter-by-amplicon-length.py ${reads} ${params.primer_bed} ${params.desired_amplicon} \
-    | gzip > ${sample_id}_filtered.fastq.gz
+    | gzip -c > ${sample_id}_filtered.fastq.gz
 	"""
 }
 

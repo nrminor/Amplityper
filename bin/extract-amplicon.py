@@ -49,22 +49,21 @@ def parse_bed_file(bed_file: str, amplicon_name: str, fwd_primer: str, rev_prime
 
 def extract_mapped_reads(bam_file: str, chrom: str, start: int, end: int) -> List[pysam.AlignedSegment]:
     """Extract mapped reads within the specified amplicon coordinates."""
-    bam = pysam.AlignmentFile(bam_file, "rb")
-    assert chrom in bam.references, f"Contig '{chrom}' not found in the BAM file."
-    
-    mapped_reads = []
-    for read in bam.fetch(chrom, start, end):
-        if not read.is_unmapped and (
-                (read.reference_start >= start and read.reference_end <= end) or
-                (read.reference_start <= start and read.reference_end >= start) or
-                (read.reference_start <= end and read.reference_end >= end)
-            ):
-            # Filter out reads that align outside the amplicon coordinates or that have 
-            # "junction" annotations
-            if "junction" not in read.query_name:
-                mapped_reads.append(read)
-    
-    bam.close()
+    with pysam.AlignmentFile(bam_file, "rb") as bam:
+        assert chrom in bam.references, f"Contig '{chrom}' not found in the BAM file."
+        
+        mapped_reads = []
+        for read in bam.fetch(chrom, start, end):
+            if not read.is_unmapped and (
+                    (read.reference_start >= start and read.reference_end <= end) or
+                    (read.reference_start <= start and read.reference_end >= start) or
+                    (read.reference_start <= end and read.reference_end >= end)
+                ):
+                # Filter out reads that align outside the amplicon coordinates or that have 
+                # "junction" annotations
+                if "junction" not in read.query_name:
+                    mapped_reads.append(read)
+                    
     return mapped_reads
 
 
