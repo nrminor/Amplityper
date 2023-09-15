@@ -28,12 +28,13 @@ def str2bool(v):
     else:
         raise ArgumentTypeError('Boolean value expected.')
 
-# define a function that parses all command line arguments for thia module
+# define a function that parses all command line arguments for this module
 def parse_process_arrays_args(parser: ArgumentParser):
     """
     Parses the python script arguments from bash and makes sure files/inputs 
     are valid
     """
+    parser = ArgumentParser()
     
     parser.add_argument('--primer_fasta',
                         type=str,
@@ -78,18 +79,8 @@ def parse_process_arrays_args(parser: ArgumentParser):
                         help='set to f if you want to leave the primers, t to trim the primers',
                         default='f',
                         required=False)
-
-# define a function that accesses command line arguments using the previous function
-def get_process_arrays_args():
-    """
-    Retrieves input arguments from bash, checks requirements, returns a dictionary of arguments
-    Return: args - Arguments as a dictionary
-    """
     
-    parser = ArgumentParser()
-    parse_process_arrays_args(parser)
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 # function that concatenates fastq.gz in script. NOTE: this block will be removed in future implementations of this script.
 def concat_fastq_gz(input_fastq_filepath, out_file):
