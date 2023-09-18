@@ -29,7 +29,7 @@ def str2bool(v):
         raise ArgumentTypeError('Boolean value expected.')
 
 # define a function that parses all command line arguments for this module
-def parse_process_arrays_args(parser: ArgumentParser):
+def parse_process_arrays_args():
     """
     Parses the python script arguments from bash and makes sure files/inputs 
     are valid
@@ -147,7 +147,7 @@ def dict_to_grouped_fastas(grouped_fasta_dir, grouped_fasta_dict):
 
 def main():
     # get the arguments
-    args = get_process_arrays_args()
+    args = parse_process_arrays_args()
 
     # save arguments to global variables by same names
     primer_fasta = args.primer_fasta
