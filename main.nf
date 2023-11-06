@@ -102,9 +102,9 @@ workflow {
         BAM_TO_FASTQ.out
     )
 
-    // HAPLOTYPE_ASSEMBLY (
-    //     FILTER_BY_LENGTH.out
-    // )
+    HAPLOTYPE_ASSEMBLY (
+        FILTER_BY_LENGTH.out
+    )
 
     // RECORD_FREQUENCIES (
     //     HAPLOTYPE_ASSEMBLY.out
@@ -413,7 +413,7 @@ process REMOVE_ARTIFACTS {
 	tuple val(sample_id), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample}_remove_artifacts.fastq.g")
+	tuple val(sample_id), path("${sample_id}_remove_artifacts.fastq.gz")
 
 	script:
 	"""
@@ -544,6 +544,7 @@ process EXTRACT_REF_AMPLICON {
 
     /* */
 
+	tag "${params.desired_amplicon}"
     label "general"
 
     input:
@@ -561,7 +562,7 @@ process EXTRACT_REF_AMPLICON {
 	--bed ${amplicon_coords} \
     -o amplicon.fasta && \
     seqkit fx2tab --no-qual --length amplicon.fasta -o amplicon.stats && \
-    len=`cat amplicon.stats | tail -n 1 | awk '{print \$2}'`
+    len=`cat amplicon.stats | tail -n 1 | awk '{print \$3}'`
     """
 
 }
@@ -585,13 +586,13 @@ process MAP_TO_AMPLICON {
 	tuple val(sample_id), path("${sample_id}_sorted.bam"), path("${sample_id}_sorted.bam.bai")
 	
 	script:
-    if ( params.geneious_mode == true )
-        """
-        geneious -i ${amplicon_seq} ${reads} -operation Map_to_Reference -o ${sample_id}.bam && \
-        samtools sort -o ${sample_id}_sorted.bam ${sample_id}.bam && \
-        samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
-        """
-    else
+    // if ( params.geneious_mode == true )
+    //     """
+    //     geneious -i ${amplicon_seq} ${reads} -operation Map_to_Reference -o ${sample_id}.bam && \
+    //     samtools sort -o ${sample_id}_sorted.bam ${sample_id}.bam && \
+    //     samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
+    //     """
+    // else
         """
         bbmap.sh ref=${amplicon_seq} in=${reads} out=stdout.sam t=${task.cpus} maxindel=200 | \
         samtools sort -o ${sample_id}_sorted.bam - && \
@@ -642,8 +643,8 @@ process BAM_TO_FASTQ {
 	
 	script:
 	"""
-	reformat.sh in=${bam} out=stdout.fastq.gz t=${task.cpus} | \
-	clumpify.sh in=stdin.fastq.gz out=${sample_id}_amplicon_reads.fastq.gz t=${task.cpus} reorder
+	reformat.sh in=${bam} out=stdout.fastq t=${task.cpus} | \
+	clumpify.sh in=stdin.fastq out=${sample_id}_amplicon_reads.fastq.gz t=${task.cpus} reorder
 	"""
 }
 
@@ -659,7 +660,7 @@ process FILTER_BY_LENGTH {
 	cpus 4
 	
 	input:
-    val max_len
+    val amplicon_length
 	tuple val(sample_id), path(reads)
 	
 	output:
@@ -667,10 +668,13 @@ process FILTER_BY_LENGTH {
 	
 	script:
 	"""
-    seqkit seqkit \
+	cat ${reads} | \
+    seqkit seq \
 	--threads ${task.cpus} \
-    --max-len ${max_len} \
-    ${reads} \
+    --max-len ${amplicon_length} \
+	--min-len ${amplicon_length} \
+	--remove-gaps \
+	--validate-seq \
     -o ${sample_id}_filtered.fastq.gz
 	"""
 }
@@ -681,7 +685,7 @@ process HAPLOTYPE_ASSEMBLY {
     */
 	
 	tag "${sample_id}"
-    label "general"
+    // label "general"
 	publishDir params.results, mode: 'copy'
 
     cpus 8
@@ -695,7 +699,7 @@ process HAPLOTYPE_ASSEMBLY {
 	script:
     if ( params.geneious_mode == true )
         """
-        geneious -i ${reads} –operation de_novo_assemble -x ${params.assembly_profile} -o ${sample_id}.bam
+        geneious -i `realpath ${reads}` –operation de_novo_assemble -x ${params.assembly_profile} -o ${sample_id}
         """
     else
         """
