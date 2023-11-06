@@ -8,8 +8,10 @@ nextflow.enable.dsl = 2
 // --------------------------------------------------------------- //
 workflow {
 
+	println()
     println("Note: This workflow currently only supports amplicons sequenced on an Illumina paired-end platform.")
     println("Support for long reads (PacBio and Oxford Nanopore) will be added in the future.")
+	println()
 	
 	// input channels
 	ch_reads = Channel
@@ -141,9 +143,13 @@ workflow {
 // --------------------------------------------------------------- //
 
 process MERGE_PAIRS {
-    /* */
 
+    /* */
+	
+	tag "${sample_id}"
     label "general"
+
+	cpus 4
 
     input:
 	tuple val(sample_id), path(reads1), path(reads2)
@@ -169,9 +175,12 @@ process FIND_ADAPTER_SEQS {
 	/* */
 	
 	tag "${sample_id}"
+    label "general"
 
 	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
 	maxRetries 2
+
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -191,9 +200,12 @@ process TRIM_ADAPTERS {
 	/* */
 	
 	tag "${sample_id}"
+    label "general"
 
 	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
 	maxRetries 2
+
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(reads), path(adapters)
@@ -220,7 +232,7 @@ process CLUMP_READS {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus params.available_cpus
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -250,8 +262,8 @@ process GET_PRIMER_SEQS {
 
     script:
     """
-    grep ${params.desired_amplicon} ${params.primer_bed} > amplicon-primers.bed && \
-    bedtools getfasta -fi ${params.reference} -bed amplicon-primers.bed | \
+    grep ${params.desired_amplicon} ${params.primer_bed} > primer_seqs.bed && \
+    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed | \
     seqkit fx2tab --no-qual -o primer_seqs.txt
     """
 
@@ -274,10 +286,10 @@ process FIND_COMPLETE_AMPLICONS {
 
     script:
     """
+	cat ${reads} | \
     seqkit amplicon \
     --primer-file ${primer_seqs} \
     --max-mismatch 2 \
-    ${reads} \
     -o ${sample_id}_amplicons.fastq.gz
     """
 
@@ -292,6 +304,8 @@ process REMOVE_OPTICAL_DUPLICATES {
 	tag "${sample_id}"
     label "general"
 	// publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+
+	cpus 4
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -319,6 +333,8 @@ process REMOVE_LOW_QUALITY_REGIONS {
     label "general"
 	// publishDir params.low_quality, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
 
+	cpus 4
+
 	input:
 	tuple val(sample_id), path(reads)
 
@@ -344,6 +360,8 @@ process REMOVE_ARTIFACTS {
 	tag "${sample_id}"
     label "general"
 	// publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+
+	cpus 4
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -372,6 +390,8 @@ process ERROR_CORRECT_PHASE_ONE {
     label "general"
 	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
 
+	cpus 4
+
 	input:
 	tuple val(sample_id), path(reads)
 
@@ -399,6 +419,8 @@ process ERROR_CORRECT_PHASE_TWO {
     label "general"
 	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
 
+	cpus 4
+
 	input:
 	tuple val(sample_id), path(reads)
 
@@ -424,6 +446,8 @@ process ERROR_CORRECT_PHASE_THREE {
 	tag "${sample_id}"
     label "general"
 	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+
+	cpus 4
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -452,6 +476,8 @@ process QUALITY_TRIM {
     label "general"
 	// publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
+	cpus 4
+
 	input:
 	tuple val(sample_id), path(reads)
 
@@ -472,6 +498,8 @@ process EXTRACT_REF_AMPLICON {
 
     /* */
 
+    label "general"
+
     input:
     path primer_file
 
@@ -481,10 +509,10 @@ process EXTRACT_REF_AMPLICON {
 
     script:
     """
+	cat ${params.reference} | \
     seqkit amplicon \
     --max-mismatch 0 \
-    --primer-file ${primer_file}
-    ${params.reference} \
+    --primer-file ${primer_file} \
     > amplicon.fasta && \
     seqkit fx2tab --no-qual --length amplicon.fasta -o amplicon.stats && \
     len=`cat amplicon.stats | tail -n 1 | awk '{print \$2}'`
@@ -501,7 +529,7 @@ process MAP_TO_AMPLICON {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus params.available_cpus
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -534,7 +562,7 @@ process CLIP_AMPLICONS {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(bam), path(index)
@@ -558,7 +586,7 @@ process BAM_TO_FASTQ {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus params.available_cpus
+	cpus 4
 	
 	input:
 	tuple val(sample_id), path(bam)
@@ -582,7 +610,7 @@ process FILTER_BY_LENGTH {
     label "general"
 	publishDir params.results, mode: 'copy'
 
-    cpus 3
+	cpus 4
 	
 	input:
     val max_len
@@ -594,6 +622,7 @@ process FILTER_BY_LENGTH {
 	script:
 	"""
     seqkit seqkit \
+	--threads ${task.cpus} \
     --max-len ${max_len} \
     ${reads} \
     -o ${sample_id}_filtered.fastq.gz
