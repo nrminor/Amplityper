@@ -79,15 +79,22 @@ RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools-2
 # Add the above to PATH
 ENV PATH="$PATH:/htslib-1.17:/bcftools-1.17:/samtools-1.17"
 
-# Install PyPy
-RUN apt-get install -y pypy3
-# RUN pypy3 -m ensurepip
-# RUN pypy3 -m pip install biopython argparse
+# Install seqkit
+RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.1.0/seqkit_linux_amd64.tar.gz \
+    && tar -xvzf seqkit_linux_amd64.tar.gz \
+    && mv seqkit /usr/local/bin/ \
+    && rm seqkit_linux_amd64.tar.gz
+
+# Install csvtk
+RUN wget https://github.com/shenwei356/csvtk/releases/download/v0.23.0/csvtk_linux_amd64.tar.gz \
+    && tar -xvzf csvtk_linux_amd64.tar.gz \
+    && mv csvtk /usr/local/bin/ \
+    && rm csvtk_linux_amd64.tar.gz
 
 # Install the required Python modules
 # RUN pip3 install biopython argparse cython pysam
-RUN export HTSLIB_CONFIGURE_OPTIONS=--enable-plugins && \
-    pip3 install biopython argparse cython pysam
+# RUN export HTSLIB_CONFIGURE_OPTIONS=--enable-plugins && \
+#     pip3 install biopython argparse cython pysam
 
 # Download and install SPAdes
 RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
