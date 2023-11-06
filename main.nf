@@ -110,21 +110,39 @@ workflow {
     //     HAPLOTYPE_ASSEMBLY.out
     // )
 
-    // DOWNSAMPLE_ASSEMBLIES (
-    //     HAPLOTYPE_ASSEMBLY.out
-    // )
+	// GENERATE_CONSENSUS (
+	// 	HAPLOTYPE_ASSEMBLY.out
+	// )
 
-    // MAP_CONTIGS_TO_REF (
-    //     DOWNSAMPLE_ASSEMBLIES.out
-    // )
+	FILTER_ASSEMBLIES (
+		HAPLOTYPE_ASSEMBLY.out.flatten()
+	)
 
-    // CALL_VARIANTS (
-    //     MAP_CONTIGS_TO_REF.out
-    // )
+    MAP_ASSEMBLY_TO_REF (
+        FILTER_ASSEMBLIES.out
+			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+			.filter { it[2] >= params.min_reads }
+			.map { name, reads, count -> tuple( name, file(reads) ) },
+		ch_refseq
+    )
+
+	TRIM_PRIMERS (
+		MAP_ASSEMBLY_TO_REF.out,
+		ch_primer_bed
+	)
+
+	CALL_CONSENSUS_SEQS (
+		TRIM_PRIMERS.out
+	)
+
+    CALL_VARIANTS (
+        TRIM_PRIMERS.out,
+		ch_refseq
+    )
 
     // GENERATE_REPORT (
     //     DOWNSAMPLE_ASSEMBLIES.out,
-    //     MAP_CONTIGS_TO_REF.out,
+    //     MAP_ASSEMBLY_TO_REF.out,
     //     CALL_CONSENSUS_SEQS.out,
     //     CALL_VARIANTS.out
     // )
@@ -144,12 +162,22 @@ params.preprocessing = params.results + "/01_preprocessing"
 params.merged_reads = params.preprocessing + "/01_merged_pairs"
 params.clumped_reads = params.preprocessing + "/02_clumped_reads"
 params.trim_adapters = params.preprocessing + "/03_trim_adapters"
-params.optical_dedupe = params.preprocessing + "/04_optical_dedup"
-params.low_quality = params.preprocessing + "/05_remove_low_quality"
-params.remove_artifacts = params.preprocessing + "/06_remove_artifacts"
-params.error_correct = params.preprocessing + "/07_error_correct"
-params.normalize = params.preprocessing + "/08_normalized_reads"
+params.amplicon_reads = params.preprocessing + "/04_amplicon_reads"
+params.optical_dedupe = params.preprocessing + "/05_optical_dedup"
+params.low_quality = params.preprocessing + "/06_remove_low_quality"
+params.remove_artifacts = params.preprocessing + "/07_remove_artifacts"
+params.error_correct = params.preprocessing + "/08_error_correct"
 params.qtrim = params.preprocessing + "/09_quality_trim"
+params.clipped = params.preprocessing + "/10_clipped_reads"
+params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
+
+// assembly results
+params.assembly_results = params.results + "/02_assembly_results"
+params.assembly_reads = params.assembly_results + "/01_assembly_reads"
+params.aligned_assembly = params.assembly_results + "/02_aligned_assemblies"
+params.consensus = params.assembly_results + "/03_contigs"
+params.variants = params.assembly_results + "/04_contig_variants"
+
 
 // --------------------------------------------------------------- //
 
@@ -165,6 +193,7 @@ process MERGE_PAIRS {
 	
 	tag "${sample_id}"
     label "general"
+	publishDir params.merged_reads, mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -194,7 +223,7 @@ process CLUMP_READS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.clumped_reads, mode: 'copy', overwrite: true
 
 	cpus 4
 	
@@ -241,6 +270,7 @@ process TRIM_ADAPTERS {
 	
 	tag "${sample_id}"
     label "general"
+	publishDir params.trim_adapters, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
 	maxRetries 2
@@ -313,6 +343,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     tag "${sample_id}"
     label "general"
+	publishDir params.amplicon_reads, mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -349,7 +380,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -377,7 +408,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.low_quality, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.low_quality, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -405,7 +436,7 @@ process REMOVE_ARTIFACTS {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -432,9 +463,9 @@ process ERROR_CORRECT_PHASE_ONE {
 	goes through BBMerge.
 	*/
 
-	tag "${sample}"
+	tag "${sample_id}"
     label "general"
-	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -463,7 +494,7 @@ process ERROR_CORRECT_PHASE_TWO {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -491,7 +522,7 @@ process ERROR_CORRECT_PHASE_THREE {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.publishMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -520,7 +551,7 @@ process QUALITY_TRIM {
 
 	tag "${sample_id}"
     label "general"
-	// publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 
@@ -574,7 +605,6 @@ process MAP_TO_AMPLICON {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
 
 	cpus 4
 	
@@ -586,18 +616,11 @@ process MAP_TO_AMPLICON {
 	tuple val(sample_id), path("${sample_id}_sorted.bam"), path("${sample_id}_sorted.bam.bai")
 	
 	script:
-    // if ( params.geneious_mode == true )
-    //     """
-    //     geneious -i ${amplicon_seq} ${reads} -operation Map_to_Reference -o ${sample_id}.bam && \
-    //     samtools sort -o ${sample_id}_sorted.bam ${sample_id}.bam && \
-    //     samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
-    //     """
-    // else
-        """
-        bbmap.sh ref=${amplicon_seq} in=${reads} out=stdout.sam t=${task.cpus} maxindel=200 | \
-        samtools sort -o ${sample_id}_sorted.bam - && \
-        samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
-        """
+	"""
+	bbmap.sh ref=${amplicon_seq} in=${reads} out=stdout.sam t=${task.cpus} maxindel=200 | \
+	samtools sort -o ${sample_id}_sorted.bam - && \
+	samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
+	"""
 }
 
 process CLIP_AMPLICONS {
@@ -607,7 +630,7 @@ process CLIP_AMPLICONS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.clipped, mode: 'copy', overwrite: true
 
 	cpus 4
 	
@@ -620,7 +643,13 @@ process CLIP_AMPLICONS {
 	
 	script:
 	"""
-	samtools ampliconclip -b ${amplicon_bed} ${sample_id}_sorted.bam -o ${sample_id}_clipped.bam
+	samtools ampliconclip \
+	-b ${amplicon_bed} \
+	--soft-clip \
+	--both-ends \
+	--clipped \
+	${sample_id}_sorted.bam \
+	-o ${sample_id}_clipped.bam
 	"""
 }
 
@@ -631,7 +660,7 @@ process BAM_TO_FASTQ {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.clipped, mode: 'copy', overwrite: true
 
 	cpus 4
 	
@@ -655,7 +684,7 @@ process FILTER_BY_LENGTH {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.complete_amplicon, mode: 'copy'
 
 	cpus 4
 	
@@ -686,7 +715,7 @@ process HAPLOTYPE_ASSEMBLY {
 	
 	tag "${sample_id}"
     // label "general"
-	publishDir params.results, mode: 'copy'
+	// publishDir params.assembly_reads, pattern: "*Contig*", mode: 'copy'
 
     cpus 8
 	
@@ -694,17 +723,18 @@ process HAPLOTYPE_ASSEMBLY {
 	tuple val(sample_id), path(reads)
 	
 	output:
-	tuple val(sample_id), path(bam)
+	path "*.fastq.gz"
+
+	when:
+	params.geneious_mode == true
 	
 	script:
-    if ( params.geneious_mode == true )
-        """
-        geneious -i `realpath ${reads}` –operation de_novo_assemble -x ${params.assembly_profile} -o ${sample_id}
-        """
-    else
-        """
-        spades.py --merged ${reads} --corona --threads ${task.cpus} -o .
-        """
+	"""
+	geneious -i ${reads} -x ${params.assembly_profile} -o ${sample_id}.fastq.gz --multi-file && \
+	for file in *Contig*.fastq.gz; do
+		mv "\$file" "\${file// /_}"
+	done
+	"""
 }
 
 // process RECORD_FREQUENCIES {
@@ -728,55 +758,63 @@ process HAPLOTYPE_ASSEMBLY {
 // 	"""
 // }
 
-process DOWNSAMPLE_ASSEMBLIES {
+process FILTER_ASSEMBLIES {
 
-    /*
-    */
-	
-	tag "${sample_id}"
+	/* */
+
+	tag "${file_name}"
     label "general"
-	publishDir params.results, mode: 'copy'
-	
+	publishDir params.assembly_reads, mode: 'copy'
+
+	errorStrategy 'ignore'
+
+    cpus 4
+
 	input:
-	tuple val(sample_id), path(bam)
-	
+	path assembly_reads
+
 	output:
-	tuple val(sample_id), path("*.bam")
-	
+	tuple val(file_name), path("*.fastq.gz")
+
+	when:
+	assembly_reads.getSimpleName().contains("Contig")
+
 	script:
+	sample_id = assembly_reads.getSimpleName().split("_L00")[0]
+	contig_num = assembly_reads.getName().split(".fastq.gz")[0].replace("Unpaired", "").split("_")[-1]
+	file_name = sample_id + "_contig" + contig_num
 	"""
-	samtools view -b -s 0.1 ${bam} > ${sample_id}_downsampled.bam
+	clumpify.sh in="${assembly_reads}" out="${file_name}.fastq.gz" reorder
 	"""
+
 }
 
-process MAP_CONTIGS_TO_REF {
+process MAP_ASSEMBLY_TO_REF {
 
     /*
     */
 	
-	tag "${sample_id}"
+	tag "${name}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.aligned_assembly, mode: 'copy'
 
-    cpus 3
+	errorStrategy 'ignore'
+
+    cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(name), path(assembly_reads)
+	each path(refseq)
 	
 	output:
-	tuple val(sample_id), path("*.bam")
+	tuple val(name), path("*.bam")
 	
 	script:
-	if ( params.geneious_mode == true )
-        """
-        echo in development > false.bam
-        """
-    else
-        """
-        reformat.sh in=${bam} out=stdout.fastq.gz | \
-        bbmap.sh ref=${params.reference} in=${reads} out=stdout.sam | \
-        reformat.sh in=stdin.sam out=${sample_id}.bam 
-        """
+	"""
+	bbmap.sh int=f ref=${refseq} in=${assembly_reads} out=stdout.sam maxindel=200 | \
+	reformat.sh in=stdin.sam out="${name}.bam"
+	"""
+
 }
 
 process TRIM_PRIMERS {
@@ -784,21 +822,23 @@ process TRIM_PRIMERS {
     /*
     */
 	
-	tag "${sample_id}"
+	tag "${name}"
     label "iVar"
-	publishDir params.results, mode: 'copy'
 
-    cpus 3
+	errorStrategy 'ignore'
+
+    cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(name), path(bam)
+	each path(primer_bed)
 	
 	output:
-	tuple val(sample_id), path("*.bam")
+	tuple val(name), path("*.bam")
 	
 	script:
 	"""
-    ivar trim -b ${params.primer_bed} -p sample_id_trimmed -i ${bam} -q 15 -m 50 -s 4
+    ivar trim -b ${primer_bed} -i ${bam} -q 15 -m 50 -s 4 -p ${name}_trimmed
 	"""
 }
 
@@ -807,21 +847,23 @@ process CALL_CONSENSUS_SEQS {
     /*
     */
 	
-	tag "${sample_id}"
-    label "general"
-	publishDir params.results, mode: 'copy'
+	tag "${name}"
+    label "iVar"
+	publishDir params.consensus, mode: 'copy'
 
-    cpus 3
+	errorStrategy 'ignore'
+
+    cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(name), path(bam)
 	
 	output:
-	tuple val(sample_id), path("*.fasta")
+	tuple val(name), path("${name}_consensus.fa*")
 	
 	script:
 	"""
-    pileup.sh in=${bam} out=${sample_id}_pileup.txt consensus=${sample_id}_consensus.fasta
+	samtools mpileup -aa -A -d 0 -Q 0 "${bam}" | ivar consensus -t 0.5 -p ${name}_consensus
 	"""
 }
 
@@ -830,47 +872,24 @@ process CALL_VARIANTS {
     /*
     */
 	
-	tag "${sample_id}"
+	tag "${name}"
     label "general"
-	publishDir params.results, mode: 'copy'
+	publishDir params.variants, mode: 'copy'
 
-    cpus 3
+	errorStrategy 'ignore'
+
+    cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(name), path(bam)
+	each path(refseq)
 	
 	output:
-	tuple val(sample_id), path("*.vcf")
+	tuple val(name), path("*.vcf")
 	
 	script:
 	"""
-    bcftools mpileup -Ou -f ${params.reference} ${bam} | bcftools call -mv -Ov -o ${sample_id}.vcf
-	"""
-
-}
-
-process RUN_IVAR {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "iVar"
-	publishDir params.results, mode: 'copy'
-
-    cpus 3
-	
-	input:
-	tuple val(sample_id), path(bam)
-	
-	output:
-	tuple val(sample_id), path("*.tsv"), path("*.fasta")
-	
-	script:
-	"""
-    samtools mpileup -aa -A -d 600000 -B -Q 0 ${bam} | \
-    tee >(ivar variants -p ${sample_id} -q 20 -t 0.03 -r ${params.reference} -g ${params.gff}) | \
-    ivar consensus -p ${sample_id}_ivar_consensus -q 20 -t 0
+    bcftools mpileup -Ou -f ${refseq} ${bam} | bcftools call --ploidy 1 -mv -Ov -o ${name}.vcf
 	"""
 
 }
