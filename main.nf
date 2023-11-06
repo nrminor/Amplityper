@@ -47,7 +47,7 @@ workflow {
 
     FIND_COMPLETE_AMPLICONS (
         TRIM_ADAPTERS.out,
-        GET_PRIMER_SEQS.out.txt
+        GET_PRIMER_SEQS.out.patterns
     )
 
     REMOVE_OPTICAL_DUPLICATES (
@@ -268,6 +268,7 @@ process GET_PRIMER_SEQS {
     /*
     */
 
+	tag "${params.desired_amplicon}"
     label "general"
 
     input:
@@ -317,7 +318,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     input:
 	tuple val(sample_id), path(reads)
-    path primer_seqs
+    path search_patterns
     
     output:
     tuple val(sample_id), path("${sample_id}_amplicons.fastq.gz")
@@ -325,13 +326,16 @@ process FIND_COMPLETE_AMPLICONS {
     script:
     """
 	cat ${reads} | \
-    seqkit amplicon \
-    --primer-file ${primer_seqs} \
-    --max-mismatch 3 \
-	--region 1:-1 \
-	--strict-mode \
-	--immediate-output \
+    seqkit grep \
 	--threads ${task.cpus} \
+	--max-mismatch 3 \
+	--by-seq \
+	--pattern `head -n 1 ${search_patterns}` | \
+	seqkit grep \
+	--threads ${task.cpus} \
+	--max-mismatch 3 \
+	--by-seq \
+	--pattern `tail -n 1 ${search_patterns}` \
     -o ${sample_id}_amplicons.fastq.gz
     """
 
