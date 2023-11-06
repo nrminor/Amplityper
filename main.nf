@@ -8,7 +8,7 @@ nextflow.enable.dsl = 2
 // --------------------------------------------------------------- //
 workflow {
 
-    println("Note: This workflow currently only supports amplicons sequenced on a Illumina paired-end platform.")
+    println("Note: This workflow currently only supports amplicons sequenced on an Illumina paired-end platform.")
     println("Support for longer reads will be added in the future.")
 	
 	// input channels
@@ -103,17 +103,17 @@ workflow {
     //     HAPLOTYPE_ASSEMBLY.out
     // )
 
-    DOWNSAMPLE_ASSEMBLIES (
-        HAPLOTYPE_ASSEMBLY.out
-    )
+    // DOWNSAMPLE_ASSEMBLIES (
+    //     HAPLOTYPE_ASSEMBLY.out
+    // )
 
-    MAP_CONTIGS_TO_REF (
-        DOWNSAMPLE_ASSEMBLIES.out
-    )
+    // MAP_CONTIGS_TO_REF (
+    //     DOWNSAMPLE_ASSEMBLIES.out
+    // )
 
-    CALL_VARIANTS (
-        MAP_CONTIGS_TO_REF.out
-    )
+    // CALL_VARIANTS (
+    //     MAP_CONTIGS_TO_REF.out
+    // )
 
     // GENERATE_REPORT (
     //     DOWNSAMPLE_ASSEMBLIES.out,
