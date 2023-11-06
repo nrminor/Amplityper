@@ -9,7 +9,7 @@ nextflow.enable.dsl = 2
 workflow {
 
     println("Note: This workflow currently only supports amplicons sequenced on an Illumina paired-end platform.")
-    println("Support for longer reads will be added in the future.")
+    println("Support for long reads (PacBio and Oxford Nanopore) will be added in the future.")
 	
 	// input channels
 	ch_reads = Channel
@@ -87,7 +87,7 @@ workflow {
     )
 
     BAM_TO_FASTQ (
-        EXTRACT_AMPLICON.out
+        CLIP_AMPLICONS.out
     )
 
     FILTER_BY_LENGTH (
@@ -153,11 +153,12 @@ process MERGE_PAIRS {
 
     script:
     """
-    bbmerge-auto.sh in=`realpath ${reads}` \
-    out=${sample}_merged.fastq.gz \
-    outu=${sample}_unmerged.fastq.gz \
+    bbmerge-auto.sh in1=`realpath ${reads1}` \
+	in2=`realpath ${reads2}` \
+    out=${sample_id}_merged.fastq.gz \
+    outu=${sample_id}_unmerged.fastq.gz \
     strict k=93 extend2=80 rem ordered \
-    ihist=${sample}_ihist_merge.txt \
+    ihist=${sample_id}_ihist_merge.txt \
     threads=${task.cpus}
     """
 
@@ -296,7 +297,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 	tuple val(sample_id), path(reads)
 
 	output:
-	tuple val(sample_id) path("${sample_id}_deduped.fastq.gz")
+	tuple val(sample_id), path("${sample_id}_deduped.fastq.gz")
 
 	script:
 	"""
@@ -486,7 +487,7 @@ process EXTRACT_REF_AMPLICON {
     ${params.reference} \
     > amplicon.fasta && \
     seqkit fx2tab --no-qual --length amplicon.fasta -o amplicon.stats && \
-    len=`cat amplicon.stats | tail -n 1 | awk '{print $2}'`
+    len=`cat amplicon.stats | tail -n 1 | awk '{print \$2}'`
     """
 
 }
