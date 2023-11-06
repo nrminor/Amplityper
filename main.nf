@@ -11,6 +11,7 @@ workflow {
 	println()
     println("Note: This workflow currently only supports amplicons sequenced on an Illumina paired-end platform.")
     println("Support for long reads (PacBio and Oxford Nanopore) will be added in the future.")
+	println("-----------------------------------------------------------------------------------------------")
 	println()
 	
 	// input channels
@@ -19,30 +20,33 @@ workflow {
 
     ch_primer_bed = Channel
         .fromPath( params.primer_bed )
+
+	ch_refseq = Channel
+		.fromPath( params.reference )
 	
 	// Workflow steps
     MERGE_PAIRS (
         ch_reads
     )
 
-    FIND_ADAPTER_SEQS (
+    CLUMP_READS (
         MERGE_PAIRS.out
+    )
+
+    FIND_ADAPTER_SEQS (
+        CLUMP_READS.out
     )
 
 	TRIM_ADAPTERS (
         FIND_ADAPTER_SEQS.out
 	)
 
-    CLUMP_READS (
-        TRIM_ADAPTERS.out
-    )
-
     GET_PRIMER_SEQS (
         ch_primer_bed
     )
 
     FIND_COMPLETE_AMPLICONS (
-        CLUMP_READS.out,
+        TRIM_ADAPTERS.out,
         GET_PRIMER_SEQS.out.txt
     )
 
@@ -75,7 +79,8 @@ workflow {
 	)
 
     EXTRACT_REF_AMPLICON (
-        GET_PRIMER_SEQS.out.txt
+		ch_refseq,
+        GET_PRIMER_SEQS.out.amplicon_coords
     )
 
     MAP_TO_AMPLICON (
@@ -134,6 +139,18 @@ workflow {
 // --------------------------------------------------------------- //
 // Additional parameters that are derived from parameters set in nextflow.config
 
+// Preprocessing results subdirectories
+params.preprocessing = params.results + "/01_preprocessing"
+params.merged_reads = params.preprocessing + "/01_merged_pairs"
+params.clumped_reads = params.preprocessing + "/02_clumped_reads"
+params.trim_adapters = params.preprocessing + "/03_trim_adapters"
+params.optical_dedupe = params.preprocessing + "/04_optical_dedup"
+params.low_quality = params.preprocessing + "/05_remove_low_quality"
+params.remove_artifacts = params.preprocessing + "/06_remove_artifacts"
+params.error_correct = params.preprocessing + "/07_error_correct"
+params.normalize = params.preprocessing + "/08_normalized_reads"
+params.qtrim = params.preprocessing + "/09_quality_trim"
+
 // --------------------------------------------------------------- //
 
 
@@ -168,6 +185,29 @@ process MERGE_PAIRS {
     threads=${task.cpus}
     """
 
+}
+
+process CLUMP_READS {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.results, mode: 'copy'
+
+	cpus 4
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+    tuple val(sample_id), path("${sample_id}_clumped.fastq.gz")
+	
+	script:
+	"""
+	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz t=${task.cpus} reorder
+	"""
 }
 
 process FIND_ADAPTER_SEQS {
@@ -218,32 +258,9 @@ process TRIM_ADAPTERS {
 	reformat.sh in=`realpath ${reads}` \
 	out=${sample_id}_no_adapters.fastq.gz \
 	ref=`realpath ${adapters}` \
-	uniquenames=t overwrite=true t=${task.cpus}
+	uniquenames=t overwrite=true t=${task.cpus} -Xmx8g
     """
 
-}
-
-process CLUMP_READS {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "general"
-	publishDir params.results, mode: 'copy'
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), path(reads)
-	
-	output:
-    tuple val(sample_id), path("${sample_id}_clumped.fastq.gz")
-	
-	script:
-	"""
-	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz t=${task.cpus} reorder
-	"""
 }
 
 process GET_PRIMER_SEQS {
@@ -259,12 +276,31 @@ process GET_PRIMER_SEQS {
     output:
     path "primer_seqs.bed", emit: bed
     path "primer_seqs.txt", emit: txt
+	path "amplicon_coords.bed", emit: amplicon_coords
+	path "patterns.txt", emit: patterns
 
     script:
     """
+
+	# get the actual primer sequences and make sure the amplicon's reverse primer
+	# is complementary to the reference sequence it's based on
     grep ${params.desired_amplicon} ${params.primer_bed} > primer_seqs.bed && \
-    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed | \
-    seqkit fx2tab --no-qual -o primer_seqs.txt
+    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed > tmp.fasta && \
+	grep -v "^>" tmp.fasta > patterns.txt && \
+	seqkit head -n 1 tmp.fasta -o primer_seqs.fasta && \
+	seqkit range -r -1:-1 tmp.fasta | \
+	seqkit seq --complement --validate-seq --seq-type DNA >> primer_seqs.fasta && \
+	rm tmp.fasta
+
+	# determine the amplicon coordinates
+	cat primer_seqs.bed | \
+	awk 'NR==1{start=\$2} NR==2{end=\$3} END{print \$1, start, end}' OFS="\t" \
+	> amplicon_coords.bed
+
+	# convert to a text file that can be read by `seqkit amplicon`
+    seqkit fx2tab --no-qual primer_seqs.fasta | \
+	awk '{print \$2}' | paste -sd \$'\t' - - | awk -v amplicon="${params.desired_amplicon}" \
+	'BEGIN {OFS="\t"} {print amplicon, \$0}' | head -n 1 > primer_seqs.txt
     """
 
 }
@@ -276,6 +312,8 @@ process FIND_COMPLETE_AMPLICONS {
 
     tag "${sample_id}"
     label "general"
+
+	cpus 4
 
     input:
 	tuple val(sample_id), path(reads)
@@ -289,7 +327,11 @@ process FIND_COMPLETE_AMPLICONS {
 	cat ${reads} | \
     seqkit amplicon \
     --primer-file ${primer_seqs} \
-    --max-mismatch 2 \
+    --max-mismatch 3 \
+	--region 1:-1 \
+	--strict-mode \
+	--immediate-output \
+	--threads ${task.cpus} \
     -o ${sample_id}_amplicons.fastq.gz
     """
 
@@ -501,7 +543,8 @@ process EXTRACT_REF_AMPLICON {
     label "general"
 
     input:
-    path primer_file
+	path refseq
+    path amplicon_coords
 
     output:
     path "amplicon.fasta", emit: seq
@@ -509,11 +552,10 @@ process EXTRACT_REF_AMPLICON {
 
     script:
     """
-	cat ${params.reference} | \
-    seqkit amplicon \
-    --max-mismatch 0 \
-    --primer-file ${primer_file} \
-    > amplicon.fasta && \
+	cat ${refseq} | \
+    seqkit subseq \
+	--bed ${amplicon_coords} \
+    -o amplicon.fasta && \
     seqkit fx2tab --no-qual --length amplicon.fasta -o amplicon.stats && \
     len=`cat amplicon.stats | tail -n 1 | awk '{print \$2}'`
     """
