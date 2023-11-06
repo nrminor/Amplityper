@@ -135,6 +135,10 @@ workflow {
 		TRIM_PRIMERS.out
 	)
 
+	EXTRACT_AMPLICON_CONSENSUS (
+		CALL_CONSENSUS_SEQS.out
+	)
+
     CALL_VARIANTS (
         TRIM_PRIMERS.out,
 		ch_refseq
@@ -157,8 +161,11 @@ workflow {
 // --------------------------------------------------------------- //
 // Additional parameters that are derived from parameters set in nextflow.config
 
+// overarching first level in results file hierarchy
+params.amplicon_results = params.results + "/amplicon_${params.desired_amplicon}"
+
 // Preprocessing results subdirectories
-params.preprocessing = params.results + "/01_preprocessing"
+params.preprocessing = params.amplicon_results + "/01_preprocessing"
 params.merged_reads = params.preprocessing + "/01_merged_pairs"
 params.clumped_reads = params.preprocessing + "/02_clumped_reads"
 params.trim_adapters = params.preprocessing + "/03_trim_adapters"
@@ -172,7 +179,7 @@ params.clipped = params.preprocessing + "/10_clipped_reads"
 params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
 
 // assembly results
-params.assembly_results = params.results + "/02_assembly_results"
+params.assembly_results = params.amplicon_results + "/02_assembly_results"
 params.assembly_reads = params.assembly_results + "/01_assembly_reads"
 params.aligned_assembly = params.assembly_results + "/02_aligned_assemblies"
 params.consensus = params.assembly_results + "/03_contigs"
@@ -764,7 +771,7 @@ process FILTER_ASSEMBLIES {
 
 	tag "${file_name}"
     label "general"
-	publishDir params.assembly_reads, mode: 'copy'
+	publishDir params.assembly_reads, mode: 'copy', overwrite: true
 
 	errorStrategy 'ignore'
 
@@ -796,7 +803,7 @@ process MAP_ASSEMBLY_TO_REF {
 	
 	tag "${name}"
     label "general"
-	publishDir params.aligned_assembly, mode: 'copy'
+	publishDir params.aligned_assembly, mode: 'copy', overwrite: true
 
 	errorStrategy 'ignore'
 
@@ -849,7 +856,7 @@ process CALL_CONSENSUS_SEQS {
 	
 	tag "${name}"
     label "iVar"
-	publishDir params.consensus, mode: 'copy'
+	// publishDir params.consensus, mode: 'copy', overwrite: true
 
 	errorStrategy 'ignore'
 
@@ -865,6 +872,37 @@ process CALL_CONSENSUS_SEQS {
 	"""
 	samtools mpileup -aa -A -d 0 -Q 0 "${bam}" | ivar consensus -t 0.5 -p ${name}_consensus
 	"""
+
+}
+
+process EXTRACT_AMPLICON_CONSENSUS {
+
+	/* */
+	
+	tag "${name}"
+    label "general"
+	publishDir params.consensus, mode: 'copy', overwrite: true
+
+	errorStrategy 'ignore'
+	
+	input:
+	tuple val(name), path(fasta)
+	
+	output:
+	tuple val(name), path("${name}_${params.desired_amplicon}_consensus.fa*")
+	
+	script:
+	"""
+	cat ${fasta} | \
+	seqkit replace \
+	--ignore-case \
+	--by-seq \
+	--pattern "N" \
+	--replacement "" \
+	-o "${name}_${params.desired_amplicon}_consensus.fa"
+	"""
+
+
 }
 
 process CALL_VARIANTS {
@@ -874,7 +912,7 @@ process CALL_VARIANTS {
 	
 	tag "${name}"
     label "general"
-	publishDir params.variants, mode: 'copy'
+	publishDir params.variants, mode: 'copy', overwrite: true
 
 	errorStrategy 'ignore'
 
@@ -885,7 +923,7 @@ process CALL_VARIANTS {
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("*.vcf")
+	tuple val(name), path("${name}.vcf")
 	
 	script:
 	"""
