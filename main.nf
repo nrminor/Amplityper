@@ -161,7 +161,7 @@ workflow {
 // Additional parameters that are derived from parameters set in nextflow.config
 
 // whether to terminate when unrecoverable error occurs
-if params.debugmode {
+if ( params.debugmode ) {
 	params.errorMode = 'terminate'
 } else {
 	params.errorMode = 'ignore'
