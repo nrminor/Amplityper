@@ -98,7 +98,6 @@ workflow {
     )
 
     VALIDATE_SEQS (
-        EXTRACT_REF_AMPLICON.out.length,
         BAM_TO_FASTQ.out
     )
 
@@ -266,7 +265,7 @@ process FIND_ADAPTER_SEQS {
 	
 	script:
 	"""
-    bbmerge.sh in=`realpath ${reads}` outa="${sample_id}_adapters.fasta" ow qin=33
+    bbmerge.sh in=`realpath ${reads}` outa="${sample_id}_adapters.fasta" # ow qin=33
 	"""
 
 }
@@ -356,7 +355,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     input:
 	tuple val(sample_id), path(reads)
-    path search_patterns
+    each path(search_patterns)
     
     output:
     tuple val(sample_id), path("${sample_id}_amplicons.fastq.gz")
@@ -617,7 +616,7 @@ process MAP_TO_AMPLICON {
 	
 	input:
 	tuple val(sample_id), path(reads)
-    path amplicon_seq
+    each path(amplicon_seq)
 	
 	output:
 	tuple val(sample_id), path("${sample_id}_sorted.bam"), path("${sample_id}_sorted.bam.bai")
@@ -643,7 +642,7 @@ process CLIP_AMPLICONS {
 	
 	input:
 	tuple val(sample_id), path(bam), path(index)
-    path amplicon_bed
+    each path(amplicon_bed)
 	
 	output:
     tuple val(sample_id), path("${sample_id}_clipped.bam")
@@ -696,7 +695,6 @@ process VALIDATE_SEQS {
 	cpus 4
 	
 	input:
-    val amplicon_length
 	tuple val(sample_id), path(reads)
 	
 	output:
