@@ -97,13 +97,13 @@ workflow {
         CLIP_AMPLICONS.out
     )
 
-    FILTER_BY_LENGTH (
+    VALIDATE_SEQS (
         EXTRACT_REF_AMPLICON.out.length,
         BAM_TO_FASTQ.out
     )
 
     HAPLOTYPE_ASSEMBLY (
-        FILTER_BY_LENGTH.out
+        VALIDATE_SEQS.out
     )
 
     // RECORD_FREQUENCIES (
@@ -684,7 +684,7 @@ process BAM_TO_FASTQ {
 	"""
 }
 
-process FILTER_BY_LENGTH {
+process VALIDATE_SEQS {
 
     /*
     */
@@ -707,8 +707,6 @@ process FILTER_BY_LENGTH {
 	cat ${reads} | \
     seqkit seq \
 	--threads ${task.cpus} \
-    --max-len ${amplicon_length} \
-	--min-len ${amplicon_length} \
 	--remove-gaps \
 	--validate-seq \
     -o ${sample_id}_filtered.fastq.gz
