@@ -10,3 +10,11 @@ timeline.html*
 report.html*
 *.dot
 *.png.*
+*.fastq*
+*.fq*
+*.fa*
+input/
+scratch/
+sandbox/
+data/
+dev/
