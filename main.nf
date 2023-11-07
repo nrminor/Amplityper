@@ -160,6 +160,13 @@ workflow {
 // --------------------------------------------------------------- //
 // Additional parameters that are derived from parameters set in nextflow.config
 
+// whether to terminate when unrecoverable error occurs
+if params.debugmode {
+	params.errorMode = 'terminate'
+} else {
+	params.errorMode = 'ignore'
+}
+
 // overarching first level in results file hierarchy
 params.amplicon_results = params.results + "/amplicon_${params.desired_amplicon}"
 
@@ -201,6 +208,9 @@ process MERGE_PAIRS {
     label "general"
 	publishDir params.merged_reads, mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
     input:
@@ -231,6 +241,9 @@ process CLUMP_READS {
     label "general"
 	publishDir params.clumped_reads, mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 	
 	input:
@@ -252,7 +265,7 @@ process FIND_ADAPTER_SEQS {
 	tag "${sample_id}"
     label "general"
 
-	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
 	cpus 4
@@ -278,7 +291,7 @@ process TRIM_ADAPTERS {
     label "general"
 	publishDir params.trim_adapters, mode: 'copy', overwrite: true
 
-	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
 	cpus 4
@@ -306,6 +319,9 @@ process GET_PRIMER_SEQS {
 
 	tag "${params.desired_amplicon}"
     label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     input:
     path bed_file
@@ -351,6 +367,9 @@ process FIND_COMPLETE_AMPLICONS {
     label "general"
 	publishDir params.amplicon_reads, mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
     input:
@@ -387,6 +406,9 @@ process REMOVE_OPTICAL_DUPLICATES {
 	tag "${sample_id}"
     label "general"
 	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
 	cpus 4
 
@@ -444,6 +466,9 @@ process REMOVE_ARTIFACTS {
     label "general"
 	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
 	input:
@@ -472,6 +497,9 @@ process ERROR_CORRECT_PHASE_ONE {
 	tag "${sample_id}"
     label "general"
 	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
 	cpus 4
 
@@ -530,6 +558,9 @@ process ERROR_CORRECT_PHASE_THREE {
     label "general"
 	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
 	input:
@@ -559,6 +590,9 @@ process QUALITY_TRIM {
     label "general"
 	publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
 	input:
@@ -583,6 +617,9 @@ process EXTRACT_REF_AMPLICON {
 
 	tag "${params.desired_amplicon}"
     label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     input:
 	path refseq
@@ -612,6 +649,9 @@ process MAP_TO_AMPLICON {
 	tag "${sample_id}"
     label "general"
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 	
 	input:
@@ -637,6 +677,9 @@ process CLIP_AMPLICONS {
 	tag "${sample_id}"
     label "general"
 	publishDir params.clipped, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
 	cpus 4
 	
@@ -668,6 +711,9 @@ process BAM_TO_FASTQ {
     label "general"
 	publishDir params.clipped, mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 	
 	input:
@@ -691,6 +737,9 @@ process VALIDATE_SEQS {
 	tag "${sample_id}"
     label "general"
 	publishDir params.complete_amplicon, mode: 'copy'
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
 	cpus 4
 	
@@ -719,6 +768,9 @@ process HAPLOTYPE_ASSEMBLY {
 	tag "${sample_id}"
     // label "general"
 	// publishDir params.assembly_reads, pattern: "*Contig*", mode: 'copy'
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 8
 	
@@ -769,7 +821,8 @@ process FILTER_ASSEMBLIES {
     label "general"
 	publishDir params.assembly_reads, mode: 'copy', overwrite: true
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 4
 
@@ -801,7 +854,8 @@ process MAP_ASSEMBLY_TO_REF {
     label "general"
 	publishDir params.aligned_assembly, mode: 'copy', overwrite: true
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 4
 	
@@ -828,7 +882,8 @@ process TRIM_PRIMERS {
 	tag "${name}"
     label "iVar"
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 4
 	
@@ -854,7 +909,8 @@ process CALL_CONSENSUS_SEQS {
     label "iVar"
 	// publishDir params.consensus, mode: 'copy', overwrite: true
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 4
 	
@@ -879,7 +935,8 @@ process EXTRACT_AMPLICON_CONSENSUS {
     label "general"
 	publishDir params.consensus, mode: 'copy', overwrite: true
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 	
 	input:
 	tuple val(name), path(fasta)
@@ -910,7 +967,8 @@ process CALL_VARIANTS {
     label "general"
 	publishDir params.variants, mode: 'copy', overwrite: true
 
-	errorStrategy 'ignore'
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
 
     cpus 4
 	
