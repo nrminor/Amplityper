@@ -1,5 +1,10 @@
 {
     "recommendations": [
-        "nextflow.nextflow"
+        "nextflow.nextflow",
+        "ms-azuretools.vscode-docker",
+        "usernamehw.errorlens",
+        "github.vscode-github-actions",
+        "mechatroner.rainbow-csv",
+        "redhat.vscode-yaml"
     ]
 }
