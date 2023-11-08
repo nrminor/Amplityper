@@ -978,7 +978,7 @@ process GENERATE_IVAR_TABLE {
 	
 	tag "${name}"
     label "ivar"
-	publishDir params.variants, mode: 'copy', overwrite: true
+	publishDir params.ivar_tables, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
