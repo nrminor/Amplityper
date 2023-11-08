@@ -87,7 +87,10 @@ workflow {
     )
 
     MAP_TO_AMPLICON (
-        QUALITY_TRIM.out,
+        QUALITY_TRIM.out
+			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+			.filter { it[2] >= params.min_reads }
+			.map { name, reads, count -> tuple( name, file(reads) ) },
         EXTRACT_REF_AMPLICON.out.seq
     )
 
@@ -108,16 +111,8 @@ workflow {
         VALIDATE_SEQS.out
 			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
 			.filter { it[2] >= params.min_reads }
-			.map { name, reads, count -> tuple( name, file(reads) ) },
+			.map { name, reads, count -> tuple( name, file(reads) ) }
     )
-
-    // RECORD_FREQUENCIES (
-    //     HAPLOTYPE_ASSEMBLY.out
-    // )
-
-	// GENERATE_CONSENSUS (
-	// 	HAPLOTYPE_ASSEMBLY.out
-	// )
 
 	FILTER_ASSEMBLIES (
 		HAPLOTYPE_ASSEMBLY.out.flatten()
@@ -125,9 +120,8 @@ workflow {
 
     MAP_ASSEMBLY_TO_REF (
         FILTER_ASSEMBLIES.out
-			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-			.filter { it[2] >= params.min_reads }
-			.map { name, reads, count -> tuple( name, file(reads) ) },
+			.map { filename, reads, id -> tuple( name, file(reads), id file(reads).countFastq() ) }
+			.filter { it[3] >= params.min_reads },
 		ch_refseq
     )
 
@@ -803,34 +797,13 @@ process HAPLOTYPE_ASSEMBLY {
 	"""
 }
 
-// process RECORD_FREQUENCIES {
-
-//     /*
-//     */
-	
-// 	tag "${sample_id}"
-//    label "general"
-// 	publishDir params.results, mode: 'copy'
-	
-// 	input:
-	
-	
-// 	output:
-	
-	
-// 	script:
-// 	"""
-	
-// 	"""
-// }
-
 process FILTER_ASSEMBLIES {
 
 	/* */
 
 	tag "${file_name}"
     label "general"
-	publishDir params.assembly_reads, mode: 'copy', overwrite: true
+	publishDir "${params.assembly_reads}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -841,7 +814,7 @@ process FILTER_ASSEMBLIES {
 	path assembly_reads
 
 	output:
-	tuple val(file_name), path("*.fastq.gz")
+	tuple val(file_name), path("*.fastq.gz"), val(sample_id)
 
 	when:
 	assembly_reads.getSimpleName().contains("Contig")
@@ -863,7 +836,7 @@ process MAP_ASSEMBLY_TO_REF {
 	
 	tag "${name}"
     label "general"
-	publishDir params.aligned_assembly, mode: 'copy', overwrite: true
+	publishDir "${params.aligned_assembly}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -871,16 +844,16 @@ process MAP_ASSEMBLY_TO_REF {
     cpus 4
 	
 	input:
-	tuple val(name), path(assembly_reads)
+	tuple val(name), path(assembly_reads), val(sample_id), val(read_support)
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("*.bam")
+	tuple val(name), path("*.bam"), val(sample_id), val(read_support)
 	
 	script:
 	"""
 	bbmap.sh int=f ref=${refseq} in=${assembly_reads} out=stdout.sam maxindel=200 | \
-	reformat.sh in=stdin.sam out="${name}.bam"
+	reformat.sh in=stdin.sam out="${name}.bam" overwrite=true
 	"""
 
 }
@@ -900,14 +873,19 @@ process CALL_CONSENSUS_SEQS {
     cpus 4
 	
 	input:
-	tuple val(name), path(bam)
+	tuple val(name), path(bam), val(sample_id), val(read_support)
 	
 	output:
-	tuple val(name), path("${name}_consensus.fa*")
+	tuple val(name), path("${name}_consensus.fa*"), val(sample_id), val(read_support)
 	
 	script:
 	"""
-	samtools mpileup -aa -A -d 0 -Q 0 "${bam}" | ivar consensus -t 0.5 -p ${name}_consensus
+	samtools sort "${bam}" | \
+	samtools mpileup \
+	-aa -A -d 0 -Q 0 \
+	- | ivar consensus \
+	-t 0 -m ${params.min_reads} -q 0 -k \
+	-p ${name}_consensus
 	"""
 
 }
@@ -918,25 +896,22 @@ process EXTRACT_AMPLICON_CONSENSUS {
 	
 	tag "${name}"
     label "general"
-	publishDir params.consensus, mode: 'copy', overwrite: true
+	publishDir "${params.consensus}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 	
 	input:
-	tuple val(name), path(fasta)
+	tuple val(name), path(fasta), val(sample_id), val(read_support)
 	
 	output:
-	tuple val(name), path("${name}_${params.desired_amplicon}_consensus.fa*")
+	tuple val(name), path("${name}_${params.desired_amplicon}_consensus.fa*"), val(sample_id), val(read_support)
 	
 	script:
 	"""
 	cat ${fasta} | \
 	seqkit replace \
-	--ignore-case \
-	--by-seq \
-	--pattern "N" \
-	--replacement "" \
+	-p \$ -r "_readsupport_${read_support}" \
 	-o "${name}_${params.desired_amplicon}_consensus.fa"
 	"""
 
@@ -950,7 +925,7 @@ process CALL_VARIANTS {
 	
 	tag "${name}"
     label "general"
-	publishDir params.variants, mode: 'copy', overwrite: true
+	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -958,11 +933,11 @@ process CALL_VARIANTS {
     cpus 4
 	
 	input:
-	tuple val(name), path(bam)
+	tuple val(name), path(bam), val(sample_id), val(read_support)
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("${name}.vcf")
+	tuple val(name), path("${name}.vcf"), val(sample_id), val(read_support)
 	
 	script:
 	"""
@@ -977,14 +952,14 @@ process GENERATE_IVAR_TABLE {
 
 	
 	tag "${name}"
-    label "ivar"
-	publishDir params.ivar_tables, mode: 'copy', overwrite: true
+    label "iVar"
+	publishDir "${params.ivar_tables}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
 	input:
-	tuple val(name), path(bam)
+	tuple val(name), path(bam), val(sample_id), val(read_support)
 	each path(refseq)
 	each path(refgff)
 
@@ -993,7 +968,7 @@ process GENERATE_IVAR_TABLE {
 
 	script:
 	"""
-	samtools mpileup -aa -A -d 0 -B -Q 0 --reference ${reference} ${bam} | \
+	samtools mpileup -aa -A -d 0 -B -Q 0 --reference ${refseq} ${bam} | \
 	ivar variants -p ${name} -t 0 -r ${refseq} -g ${refgff}
 	"""
 
