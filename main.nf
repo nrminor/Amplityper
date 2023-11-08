@@ -24,6 +24,9 @@ workflow {
 	ch_refseq = Channel
 		.fromPath( params.reference )
 	
+	ch_refgff = Channel
+		.fromPath( params.gff )
+	
 	// Workflow steps
     MERGE_PAIRS (
         ch_reads
@@ -103,6 +106,9 @@ workflow {
 
     HAPLOTYPE_ASSEMBLY (
         VALIDATE_SEQS.out
+			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+			.filter { it[2] >= params.min_reads }
+			.map { name, reads, count -> tuple( name, file(reads) ) },
     )
 
     // RECORD_FREQUENCIES (
@@ -125,13 +131,8 @@ workflow {
 		ch_refseq
     )
 
-	TRIM_PRIMERS (
-		MAP_ASSEMBLY_TO_REF.out,
-		ch_primer_bed
-	)
-
 	CALL_CONSENSUS_SEQS (
-		TRIM_PRIMERS.out
+		MAP_ASSEMBLY_TO_REF.out
 	)
 
 	EXTRACT_AMPLICON_CONSENSUS (
@@ -139,9 +140,15 @@ workflow {
 	)
 
     CALL_VARIANTS (
-        TRIM_PRIMERS.out,
+        MAP_ASSEMBLY_TO_REF.out,
 		ch_refseq
     )
+
+	GENERATE_IVAR_TABLE (
+        MAP_ASSEMBLY_TO_REF.out,
+		ch_refseq,
+		ch_refgff
+	)
 
     // GENERATE_REPORT (
     //     DOWNSAMPLE_ASSEMBLIES.out,
@@ -189,7 +196,8 @@ params.assembly_results = params.amplicon_results + "/02_assembly_results"
 params.assembly_reads = params.assembly_results + "/01_assembly_reads"
 params.aligned_assembly = params.assembly_results + "/02_aligned_assemblies"
 params.consensus = params.assembly_results + "/03_contigs"
-params.variants = params.assembly_results + "/04_contig_variants"
+params.variants = params.assembly_results + "/04_contig_VCFs"
+params.ivar_tables = params.assembly_results + "/05_ivar_tables"
 
 
 // --------------------------------------------------------------- //
@@ -617,6 +625,7 @@ process EXTRACT_REF_AMPLICON {
 
 	tag "${params.desired_amplicon}"
     label "general"
+	publishDir params.amplicon_results, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -626,7 +635,7 @@ process EXTRACT_REF_AMPLICON {
     path amplicon_coords
 
     output:
-    path "amplicon.fasta", emit: seq
+    path "${params.desired_amplicon}.fasta", emit: seq
     env len, emit: length
 
     script:
@@ -634,9 +643,10 @@ process EXTRACT_REF_AMPLICON {
 	cat ${refseq} | \
     seqkit subseq \
 	--bed ${amplicon_coords} \
-    -o amplicon.fasta && \
-    seqkit fx2tab --no-qual --length amplicon.fasta -o amplicon.stats && \
-    len=`cat amplicon.stats | tail -n 1 | awk '{print \$3}'`
+    -o ${params.desired_amplicon}.fasta && \
+    seqkit fx2tab --no-qual --length ${params.desired_amplicon}.fasta \
+	-o ${params.desired_amplicon}.stats && \
+    len=`cat ${params.desired_amplicon}.stats | tail -n 1 | awk '{print \$3}'`
     """
 
 }
@@ -694,7 +704,7 @@ process CLIP_AMPLICONS {
 	"""
 	samtools ampliconclip \
 	-b ${amplicon_bed} \
-	--soft-clip \
+	--hard-clip \
 	--both-ends \
 	--clipped \
 	${sample_id}_sorted.bam \
@@ -786,7 +796,7 @@ process HAPLOTYPE_ASSEMBLY {
 	script:
 	"""
 	geneious -i ${reads} -x ${params.assembly_profile} -o ${sample_id}.fastq.gz --multi-file && \
-	for file in *Contig*.fastq.gz; do
+	for file in ${sample_id}*Assembly*.fastq.gz; do
 		mv "\$file" "\${file// /_}"
 	done
 	"""
@@ -874,32 +884,6 @@ process MAP_ASSEMBLY_TO_REF {
 
 }
 
-process TRIM_PRIMERS {
-
-    /*
-    */
-	
-	tag "${name}"
-    label "iVar"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    cpus 4
-	
-	input:
-	tuple val(name), path(bam)
-	each path(primer_bed)
-	
-	output:
-	tuple val(name), path("*.bam")
-	
-	script:
-	"""
-    ivar trim -b ${primer_bed} -i ${bam} -q 15 -m 50 -s 4 -p ${name}_trimmed
-	"""
-}
-
 process CALL_CONSENSUS_SEQS {
 
     /*
@@ -982,6 +966,34 @@ process CALL_VARIANTS {
 	script:
 	"""
     bcftools mpileup -Ou -f ${refseq} ${bam} | bcftools call --ploidy 1 -mv -Ov -o ${name}.vcf
+	"""
+
+}
+
+process GENERATE_IVAR_TABLE {
+
+	/* */
+
+	
+	tag "${name}"
+    label "ivar"
+	publishDir params.variants, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	input:
+	tuple val(name), path(bam)
+	each path(refseq)
+	each path(refgff)
+
+	output:
+	path "*.tsv"
+
+	script:
+	"""
+	samtools mpileup -aa -A -d 0 -B -Q 0 --reference ${reference} ${bam} | \
+	ivar variants -p ${name} -t 0 -r ${refseq} -g ${refgff}
 	"""
 
 }
