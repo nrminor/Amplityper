@@ -120,7 +120,7 @@ workflow {
 
     MAP_ASSEMBLY_TO_REF (
         FILTER_ASSEMBLIES.out
-			.map { filename, reads, id -> tuple( name, file(reads), id, file(reads).countFastq() ) }
+			.map { filename, reads, id -> tuple( filename, file(reads), id, file(reads).countFastq() ) }
 			.filter { it[3] >= params.min_reads },
 		ch_refseq
     )
@@ -852,7 +852,7 @@ process MAP_ASSEMBLY_TO_REF {
 	script:
 	"""
 	bbmap.sh int=f ref=${refseq} in=${assembly_reads} out=stdout.sam maxindel=200 | \
-	reformat.sh in=stdin.sam out="${name}.bam" overwrite=true
+	reformat.sh in=stdin.sam out="${name}.bam"
 	"""
 
 }
@@ -882,7 +882,7 @@ process CALL_CONSENSUS_SEQS {
 	samtools mpileup \
 	-aa -A -d 0 -Q 0 \
 	- | ivar consensus \
-	-t 0 -m ${params.min_reads} -q 0 -k \
+	-t 0 -m 1 -q 0 -k \
 	-p ${name}_consensus
 	"""
 
