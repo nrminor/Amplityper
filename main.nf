@@ -551,7 +551,8 @@ process ERROR_CORRECT_PHASE_TWO {
 	clumpify.sh in=`realpath ${reads}` \
 	out=${sample_id}_error_correct2.fastq.gz \
 	ecc passes=4 reorder \
-	threads=${task.cpus}
+	threads=${task.cpus} \
+	-Xmx2g
 	"""
 
 }
