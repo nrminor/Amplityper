@@ -120,7 +120,7 @@ workflow {
 
     MAP_ASSEMBLY_TO_REF (
         FILTER_ASSEMBLIES.out
-			.map { filename, reads, id -> tuple( name, file(reads), id file(reads).countFastq() ) }
+			.map { filename, reads, id -> tuple( name, file(reads), id, file(reads).countFastq() ) }
 			.filter { it[3] >= params.min_reads },
 		ch_refseq
     )
@@ -772,7 +772,6 @@ process HAPLOTYPE_ASSEMBLY {
 	
 	tag "${sample_id}"
     // label "general"
-	// publishDir params.assembly_reads, pattern: "*Contig*", mode: 'copy'
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -865,7 +864,6 @@ process CALL_CONSENSUS_SEQS {
 	
 	tag "${name}"
     label "iVar"
-	// publishDir params.consensus, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
