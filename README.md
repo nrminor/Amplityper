@@ -1,7 +1,7 @@
 # READ-ZAP: Read Extraction And De novo assembly for Zero-error Amplicon Phasing
 [![Docker CI](https://github.com/nrminor/READ-ZAP/actions/workflows/docker-image.yaml/badge.svg)](https://github.com/nrminor/READ-ZAP/actions/workflows/docker-image.yaml)
 
-### Overview
+## Overview
 Many library preparations use PCR amplification to provide ample template for the sequencer. But this amplification also has bioinformatic benefits: By filtering out reads that don't have a given amplicon's forward and reverse primer, we can amass a dataset comprised exclusively of complete and therefore less error-prone amplicons. READ-ZAP uses this approach to supply clean, accurate reads to a stringent de novo assembly algorithm. The resulting contigs, derived from a "stack" of identical amplicon sequences, are each likely to represent a real viral lineage that is present in a given infection. READ-ZAP's approach helps overcome the fact that viral sequencing, far from sequencing a single "individual," is really a population sample, with many co-occurring lineages competing and evolving at once.
 
 **Please note:** READ-ZAP currently only supports Illumina paired-end short reads, though support for PacBio and Oxford Nanopore long reads will be added in the future.
