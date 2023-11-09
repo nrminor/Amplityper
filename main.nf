@@ -440,6 +440,9 @@ process REMOVE_LOW_QUALITY_REGIONS {
     label "general"
 	publishDir params.low_quality, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	cpus 4
 
 	input:
