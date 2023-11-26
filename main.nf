@@ -13,10 +13,28 @@ workflow {
     println("Support for long reads (PacBio and Oxford Nanopore) will be added in the future.")
 	println("-----------------------------------------------------------------------------------------------")
 	println()
+
+	assert (
+		( params.long_reads == true && params.illumina_pe == false ) ||
+		( params.long_reads == false && params.illumina_pe == true ) ||
+		( params.long_reads == true && params.single_short_reads == false ) ||
+		( params.long_reads == false && params.single_short_reads == true ) ||
+		( params.illumina_pe == false && params.single_short_reads == true ) ||
+		( params.illumina_pe == true && params.single_short_reads == false )
+	) : "Please make sure that only one out of the three parameters long_reads, illumina_pe parameter,\nand single_short_reads is set to true to avoid confusing the workflow."
 	
 	// input channels
-	ch_reads = Channel
-        .fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
+	if ( params.long_reads == true ) {
+		ch_reads = Channel
+			.fromFilePairs( "${params.fastq_dir}/*.fastq.gz", flat: true )
+	} else if ( params.single_short_reads == true ) {
+		ch_reads = Channel
+			.fromFilePairs( "${params.fastq_dir}/*_001.fastq.gz", flat: true )
+	} else {
+		ch_reads = Channel
+			.fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
+	}
+	
 
     ch_primer_bed = Channel
         .fromPath( params.primer_bed )
@@ -53,33 +71,47 @@ workflow {
         GET_PRIMER_SEQS.out.patterns
     )
 
-    REMOVE_OPTICAL_DUPLICATES (
-		FIND_COMPLETE_AMPLICONS.out
-	)
+	if ( params.illumina_pe == true || params.single_short_reads == true ) {
 
-	REMOVE_LOW_QUALITY_REGIONS (
-		REMOVE_OPTICAL_DUPLICATES.out
-	)
+		REMOVE_OPTICAL_DUPLICATES (
+			FIND_COMPLETE_AMPLICONS.out
+		)
 
-	REMOVE_ARTIFACTS (
-		REMOVE_LOW_QUALITY_REGIONS.out
-	)
+		REMOVE_LOW_QUALITY_REGIONS (
+			REMOVE_OPTICAL_DUPLICATES.out
+		)
 
-	ERROR_CORRECT_PHASE_ONE (
-		REMOVE_ARTIFACTS.out
-	)
+		REMOVE_ARTIFACTS (
+			REMOVE_LOW_QUALITY_REGIONS.out
+		)
 
-	ERROR_CORRECT_PHASE_TWO (
-		ERROR_CORRECT_PHASE_ONE.out
-	)
+		ERROR_CORRECT_PHASE_ONE (
+			REMOVE_ARTIFACTS.out
+		)
 
-	ERROR_CORRECT_PHASE_THREE (
-		ERROR_CORRECT_PHASE_TWO.out
-	)
+		ERROR_CORRECT_PHASE_TWO (
+			ERROR_CORRECT_PHASE_ONE.out
+		)
 
-	QUALITY_TRIM (
-		ERROR_CORRECT_PHASE_THREE.out
-	)
+		ERROR_CORRECT_PHASE_THREE (
+			ERROR_CORRECT_PHASE_TWO.out
+		)
+
+		QUALITY_TRIM (
+			ERROR_CORRECT_PHASE_THREE.out
+		)
+
+	} else {
+
+		REMOVE_ARTIFACTS (
+			FIND_COMPLETE_AMPLICONS.out
+		)
+
+		QUALITY_TRIM (
+			REMOVE_ARTIFACTS.out
+		)
+
+	}
 
     EXTRACT_REF_AMPLICON (
 		ch_refseq,
@@ -99,6 +131,14 @@ workflow {
         GET_PRIMER_SEQS.out.bed
     )
 
+	if ( params.geneious_mode != true ) {
+
+			CALL_AMPLICON_VARIANTS (
+				CLIP_AMPLICONS.out
+			)
+
+	}
+
     BAM_TO_FASTQ (
         CLIP_AMPLICONS.out
     )
@@ -107,16 +147,48 @@ workflow {
         BAM_TO_FASTQ.out
     )
 
-    HAPLOTYPE_ASSEMBLY (
-        VALIDATE_SEQS.out
-			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-			.filter { it[2] >= params.min_reads }
-			.map { name, reads, count -> tuple( name, file(reads) ) }
-    )
+	if ( params.geneious_mode == true ) {
 
-	FILTER_ASSEMBLIES (
-		HAPLOTYPE_ASSEMBLY.out.flatten()
-	)
+		ASSEMBLE_WITH_GENEIOUS (
+			VALIDATE_SEQS.out
+				.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+				.filter { it[2] >= params.min_reads }
+				.map { name, reads, count -> tuple( name, file(reads) ) }
+		)
+
+		FILTER_ASSEMBLIES (
+			ASSEMBLE_WITH_GENEIOUS.out.flatten()
+		)
+
+	} else {
+
+		ASSEMBLE_WITH_WHATSHAP (
+			VALIDATE_SEQS.out
+				.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+				.filter { it[2] >= params.min_reads }
+				.map { name, reads, count -> tuple( name, file(reads) ) },
+			CALL_AMPLICON_VARIANTS.out.vcf
+		)
+
+		if ( params.long_reads == true ) {
+
+			RUN_HAIRSPLITTER (
+				ASSEMBLE_WITH_WHATSHAP.out.flatten()
+			)
+
+			FILTER_ASSEMBLIES (
+				RUN_HAIRSPLITTER.out
+			)
+
+		} else {
+
+			FILTER_ASSEMBLIES (
+				ASSEMBLE_WITH_WHATSHAP.out.flatten()
+			)
+
+		}
+
+	}
 
     MAP_ASSEMBLY_TO_REF (
         FILTER_ASSEMBLIES.out
@@ -133,7 +205,7 @@ workflow {
 		CALL_CONSENSUS_SEQS.out
 	)
 
-    CALL_VARIANTS (
+    CALL_HAPLOTYPE_VARIANTS (
         MAP_ASSEMBLY_TO_REF.out,
 		ch_refseq
     )
@@ -148,7 +220,7 @@ workflow {
     //     DOWNSAMPLE_ASSEMBLIES.out,
     //     MAP_ASSEMBLY_TO_REF.out,
     //     CALL_CONSENSUS_SEQS.out,
-    //     CALL_VARIANTS.out
+    //     CALL_HAPLOTYPE_VARIANTS.out
     // )
 	
 	
@@ -710,6 +782,8 @@ process CLIP_AMPLICONS {
 	"""
 }
 
+// process CALL_AMPLICON_VARIANTS {}
+
 process BAM_TO_FASTQ {
 
     /*
@@ -768,7 +842,7 @@ process VALIDATE_SEQS {
 	"""
 }
 
-process HAPLOTYPE_ASSEMBLY {
+process ASSEMBLE_WITH_GENEIOUS {
 
     /*
     */
@@ -798,6 +872,10 @@ process HAPLOTYPE_ASSEMBLY {
 	done
 	"""
 }
+
+// process ASSEMBLE_WITH_WHATSHAP {}
+
+// process RUN_HAIRSPLITTER {}
 
 process FILTER_ASSEMBLIES {
 
@@ -919,7 +997,7 @@ process EXTRACT_AMPLICON_CONSENSUS {
 
 }
 
-process CALL_VARIANTS {
+process CALL_HAPLOTYPE_VARIANTS {
 
     /*
     */
