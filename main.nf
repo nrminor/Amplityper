@@ -464,12 +464,12 @@ process FIND_COMPLETE_AMPLICONS {
     """
 	cat ${reads} | \
     seqkit grep \
-	--threads ${task.cpus} \
+	--threads 2 \
 	--max-mismatch 3 \
 	--by-seq \
 	--pattern `head -n 1 ${search_patterns}` | \
 	seqkit grep \
-	--threads ${task.cpus} \
+	--threads 2 \
 	--max-mismatch 3 \
 	--by-seq \
 	--pattern `tail -n 1 ${search_patterns}` \
@@ -492,6 +492,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -501,7 +502,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 
 	script:
 	"""
-	clumpify.sh in=`realpath ${reads}` \
+	clumpify.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_deduped.fastq.gz \
 	threads=${task.cpus} \
 	dedupe optical tossbrokenreads
@@ -523,6 +524,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -532,7 +534,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 
 	script:
 	"""
-	filterbytile.sh in=`realpath ${reads}` \
+	filterbytile.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_filtered_by_tile.fastq.gz \
 	threads=${task.cpus}
 	"""
@@ -554,6 +556,7 @@ process REMOVE_ARTIFACTS {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -563,7 +566,7 @@ process REMOVE_ARTIFACTS {
 
 	script:
 	"""
-	bbduk.sh in=`realpath ${reads}` \
+	bbduk.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_remove_artifacts.fastq.gz \
 	k=31 ref=artifacts,phix ordered cardinality \
 	threads=${task.cpus}
@@ -586,6 +589,7 @@ process ERROR_CORRECT_PHASE_ONE {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -595,7 +599,7 @@ process ERROR_CORRECT_PHASE_ONE {
 
 	script:
 	"""
-	bbmerge.sh in=`realpath ${reads}` \
+	bbmerge.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_error_correct1.fastq.gz \
 	ecco mix vstrict ordered \
 	ihist=${sample_id}_ihist_merge1.txt \
@@ -615,6 +619,7 @@ process ERROR_CORRECT_PHASE_TWO {
 	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -624,7 +629,7 @@ process ERROR_CORRECT_PHASE_TWO {
 
 	script:
 	"""
-	clumpify.sh in=`realpath ${reads}` \
+	clumpify.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_error_correct2.fastq.gz \
 	ecc passes=4 reorder \
 	threads=${task.cpus} \
@@ -647,6 +652,7 @@ process ERROR_CORRECT_PHASE_THREE {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -656,7 +662,7 @@ process ERROR_CORRECT_PHASE_THREE {
 
 	script:
 	"""
-	tadpole.sh in=`realpath ${reads}` \
+	tadpole.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_error_correct3.fastq.gz \
 	ecc k=62 ordered \
 	threads=${task.cpus}
@@ -679,6 +685,7 @@ process QUALITY_TRIM {
 	maxRetries 2
 
 	cpus 4
+	memory 3.GB
 
 	input:
 	tuple val(sample_id), path(reads)
@@ -688,7 +695,7 @@ process QUALITY_TRIM {
 
 	script:
 	"""
-	bbduk.sh in=`realpath ${reads}` \
+	bbduk.sh -Xmx2g in=`realpath ${reads}` \
 	out=${sample_id}_qtrimmed.fastq.gz \
 	qtrim=rl trimq=10 minlen=70 ordered \
 	threads=${task.cpus}
