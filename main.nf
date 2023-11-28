@@ -21,21 +21,28 @@ workflow {
 		( params.long_reads == false && params.single_short_reads == true ) ||
 		( params.illumina_pe == false && params.single_short_reads == true ) ||
 		( params.illumina_pe == true && params.single_short_reads == false )
-	) : "Please make sure that only one out of the three parameters long_reads, illumina_pe parameter,\nand single_short_reads is set to true to avoid confusing the workflow."
+	) : "Please make sure that only one out of the three parameters long_reads, illumina_pe,\nand single_short_reads is set to true to avoid confusing the workflow."
 	
 	// input channels
 	if ( params.long_reads == true ) {
+
 		ch_reads = Channel
-			.fromFilePairs( "${params.fastq_dir}/*.fastq.gz", flat: true )
+			.fromPath( "${params.fastq_dir}/*.fastq.gz" )
+			.map { reads -> tuple( file(reads).getSimpleName(), file(reads) ) }
+
 	} else if ( params.single_short_reads == true ) {
+
 		ch_reads = Channel
-			.fromFilePairs( "${params.fastq_dir}/*_001.fastq.gz", flat: true )
+			.fromPath( "${params.fastq_dir}/*_001.fastq.gz" )
+			.map { reads -> tuple( file(reads).getSimpleName(), file(reads) ) }
+
 	} else {
+
 		ch_reads = Channel
 			.fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
+
 	}
 	
-
     ch_primer_bed = Channel
         .fromPath( params.primer_bed )
 
