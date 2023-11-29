@@ -53,13 +53,32 @@ workflow {
 		.fromPath( params.gff )
 	
 	// Workflow steps
-    MERGE_PAIRS (
-        ch_reads
+    GET_PRIMER_SEQS (
+        ch_primer_bed
     )
 
-    CLUMP_READS (
-        MERGE_PAIRS.out
+    EXTRACT_REF_AMPLICON (
+		ch_refseq,
+        GET_PRIMER_SEQS.out.amplicon_coords
     )
+
+	if ( params.illumina_pe == true ) {
+
+		MERGE_PAIRS (
+			ch_reads
+		)
+
+		CLUMP_READS (
+			MERGE_PAIRS.out
+		)
+
+	} else {
+
+		CLUMP_READS (
+			ch_reads
+		)
+
+	}
 
     FIND_ADAPTER_SEQS (
         CLUMP_READS.out
@@ -68,10 +87,6 @@ workflow {
 	TRIM_ADAPTERS (
         FIND_ADAPTER_SEQS.out
 	)
-
-    GET_PRIMER_SEQS (
-        ch_primer_bed
-    )
 
     FIND_COMPLETE_AMPLICONS (
         TRIM_ADAPTERS.out,
@@ -119,11 +134,6 @@ workflow {
 		)
 
 	}
-
-    EXTRACT_REF_AMPLICON (
-		ch_refseq,
-        GET_PRIMER_SEQS.out.amplicon_coords
-    )
 
     MAP_TO_AMPLICON (
         QUALITY_TRIM.out
@@ -281,6 +291,84 @@ params.ivar_tables = params.assembly_results + "/05_ivar_tables"
 // PROCESS SPECIFICATION 
 // --------------------------------------------------------------- //
 
+process GET_PRIMER_SEQS {
+
+    /*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+    path bed_file
+
+    output:
+    path "primer_seqs.bed", emit: bed
+    path "primer_seqs.txt", emit: txt
+	path "amplicon_coords.bed", emit: amplicon_coords
+	path "patterns.txt", emit: patterns
+
+    script:
+    """
+
+	# get the actual primer sequences and make sure the amplicon's reverse primer
+	# is complementary to the reference sequence it's based on
+    grep ${params.desired_amplicon} ${params.primer_bed} > primer_seqs.bed && \
+    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed > tmp.fasta && \
+	grep -v "^>" tmp.fasta > patterns.txt && \
+	seqkit head -n 1 tmp.fasta -o primer_seqs.fasta && \
+	seqkit range -r -1:-1 tmp.fasta | \
+	seqkit seq --complement --validate-seq --seq-type DNA >> primer_seqs.fasta && \
+	rm tmp.fasta
+
+	# determine the amplicon coordinates
+	cat primer_seqs.bed | \
+	awk 'NR==1{start=\$2} NR==2{end=\$3} END{print \$1, start, end}' OFS="\t" \
+	> amplicon_coords.bed
+
+	# convert to a text file that can be read by `seqkit amplicon`
+    seqkit fx2tab --no-qual primer_seqs.fasta | \
+	awk '{print \$2}' | paste -sd \$'\t' - - | awk -v amplicon="${params.desired_amplicon}" \
+	'BEGIN {OFS="\t"} {print amplicon, \$0}' | head -n 1 > primer_seqs.txt
+    """
+
+}
+
+process EXTRACT_REF_AMPLICON {
+
+    /* */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+	publishDir params.amplicon_results, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+	path refseq
+    path amplicon_coords
+
+    output:
+    path "${params.desired_amplicon}.fasta", emit: seq
+    env len, emit: length
+
+    script:
+    """
+	cat ${refseq} | \
+    seqkit subseq \
+	--bed ${amplicon_coords} \
+    -o ${params.desired_amplicon}.fasta && \
+    seqkit fx2tab --no-qual --length ${params.desired_amplicon}.fasta \
+	-o ${params.desired_amplicon}.stats && \
+    len=`cat ${params.desired_amplicon}.stats | tail -n 1 | awk '{print \$3}'`
+    """
+
+}
+
 process MERGE_PAIRS {
 
     /* */
@@ -393,52 +481,6 @@ process TRIM_ADAPTERS {
 
 }
 
-process GET_PRIMER_SEQS {
-
-    /*
-    */
-
-	tag "${params.desired_amplicon}"
-    label "general"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    input:
-    path bed_file
-
-    output:
-    path "primer_seqs.bed", emit: bed
-    path "primer_seqs.txt", emit: txt
-	path "amplicon_coords.bed", emit: amplicon_coords
-	path "patterns.txt", emit: patterns
-
-    script:
-    """
-
-	# get the actual primer sequences and make sure the amplicon's reverse primer
-	# is complementary to the reference sequence it's based on
-    grep ${params.desired_amplicon} ${params.primer_bed} > primer_seqs.bed && \
-    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed > tmp.fasta && \
-	grep -v "^>" tmp.fasta > patterns.txt && \
-	seqkit head -n 1 tmp.fasta -o primer_seqs.fasta && \
-	seqkit range -r -1:-1 tmp.fasta | \
-	seqkit seq --complement --validate-seq --seq-type DNA >> primer_seqs.fasta && \
-	rm tmp.fasta
-
-	# determine the amplicon coordinates
-	cat primer_seqs.bed | \
-	awk 'NR==1{start=\$2} NR==2{end=\$3} END{print \$1, start, end}' OFS="\t" \
-	> amplicon_coords.bed
-
-	# convert to a text file that can be read by `seqkit amplicon`
-    seqkit fx2tab --no-qual primer_seqs.fasta | \
-	awk '{print \$2}' | paste -sd \$'\t' - - | awk -v amplicon="${params.desired_amplicon}" \
-	'BEGIN {OFS="\t"} {print amplicon, \$0}' | head -n 1 > primer_seqs.txt
-    """
-
-}
-
 process FIND_COMPLETE_AMPLICONS {
 
     /*
@@ -501,12 +543,20 @@ process REMOVE_OPTICAL_DUPLICATES {
 	tuple val(sample_id), path("${sample_id}_deduped.fastq.gz")
 
 	script:
-	"""
-	clumpify.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_deduped.fastq.gz \
-	threads=${task.cpus} \
-	dedupe optical tossbrokenreads
-	"""
+	if ( sample_id.toString().contains("SRR") )
+		"""
+		rename.sh \
+		in=${reads} \
+		out=${sample_id}_deduped.fastq.gz \
+		addpairnum=t
+		"""
+	else
+		"""
+		clumpify.sh -Xmx2g in=`realpath ${reads}` \
+		out=${sample_id}_deduped.fastq.gz \
+		threads=${task.cpus} \
+		optical tossbrokenreads reorder
+		"""
 
 }
 
@@ -530,14 +580,22 @@ process REMOVE_LOW_QUALITY_REGIONS {
 	tuple val(sample_id), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_filtered_by_tile.fastq.gz")
+	tuple val(sample_id), path("${sample_id}_filtered.fastq.gz")
 
 	script:
-	"""
-	filterbytile.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_filtered_by_tile.fastq.gz \
-	threads=${task.cpus}
-	"""
+	if ( sample_id.toString().contains("SRR") )
+		"""
+		clumpify.sh -Xmx2g in=`realpath ${reads}` \
+		out=${sample_id}_filtered.fastq.gz \
+		threads=${task.cpus} \
+		reorder markduplicates
+		"""
+	else
+		"""
+		filterbytile.sh -Xmx2g in=`realpath ${reads}` \
+		out=${sample_id}_filtered.fastq.gz \
+		threads=${task.cpus}
+		"""
 
 }
 
@@ -700,38 +758,6 @@ process QUALITY_TRIM {
 	qtrim=rl trimq=10 minlen=70 ordered \
 	threads=${task.cpus}
 	"""
-
-}
-
-process EXTRACT_REF_AMPLICON {
-
-    /* */
-
-	tag "${params.desired_amplicon}"
-    label "general"
-	publishDir params.amplicon_results, mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    input:
-	path refseq
-    path amplicon_coords
-
-    output:
-    path "${params.desired_amplicon}.fasta", emit: seq
-    env len, emit: length
-
-    script:
-    """
-	cat ${refseq} | \
-    seqkit subseq \
-	--bed ${amplicon_coords} \
-    -o ${params.desired_amplicon}.fasta && \
-    seqkit fx2tab --no-qual --length ${params.desired_amplicon}.fasta \
-	-o ${params.desired_amplicon}.stats && \
-    len=`cat ${params.desired_amplicon}.stats | tail -n 1 | awk '{print \$3}'`
-    """
 
 }
 
