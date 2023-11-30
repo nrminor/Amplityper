@@ -253,8 +253,10 @@ workflow {
 // whether to terminate when unrecoverable error occurs
 if ( params.debugmode ) {
 	params.errorMode = 'terminate'
+	params.pubMode = 'copy'
 } else {
 	params.errorMode = 'ignore'
+	params.pubMode = 'symlink'
 }
 
 // overarching first level in results file hierarchy
