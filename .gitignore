@@ -21,3 +21,4 @@ dev/
 *.log
 *.txt
 *.sh
+remaining.lock

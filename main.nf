@@ -377,7 +377,7 @@ process MERGE_PAIRS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.merged_reads, mode: 'copy', overwrite: true
+	publishDir params.merged_reads, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -410,7 +410,7 @@ process CLUMP_READS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.clumped_reads, mode: 'copy', overwrite: true
+	publishDir params.clumped_reads, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -460,7 +460,7 @@ process TRIM_ADAPTERS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.trim_adapters, mode: 'copy', overwrite: true
+	publishDir params.trim_adapters, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -490,7 +490,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     tag "${sample_id}"
     label "general"
-	publishDir params.amplicon_reads, mode: 'copy', overwrite: true
+	publishDir params.amplicon_reads, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -530,7 +530,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -570,7 +570,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.low_quality, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.low_quality, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -610,7 +610,7 @@ process REMOVE_ARTIFACTS {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -643,7 +643,7 @@ process ERROR_CORRECT_PHASE_ONE {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -676,7 +676,7 @@ process ERROR_CORRECT_PHASE_TWO {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	cpus 4
 	memory 3.GB
@@ -706,7 +706,7 @@ process ERROR_CORRECT_PHASE_THREE {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -739,7 +739,7 @@ process QUALITY_TRIM {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+	publishDir params.qtrim, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -798,7 +798,7 @@ process CLIP_AMPLICONS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.clipped, mode: 'copy', overwrite: true
+	publishDir params.clipped, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -833,7 +833,7 @@ process BAM_TO_FASTQ {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.clipped, mode: 'copy', overwrite: true
+	publishDir params.clipped, mode: params.pubMode, overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -860,7 +860,7 @@ process VALIDATE_SEQS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.complete_amplicon, mode: 'copy'
+	publishDir params.complete_amplicon, mode: params.pubMode
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
