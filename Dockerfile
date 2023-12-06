@@ -5,7 +5,11 @@ FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Update the package list and install necessary packages
-RUN apt-get update && apt-get install -y \
+RUN apt update && \
+    apt install software-properties-common -y && \
+    apt update && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && apt-get install -y \
     build-essential \
     gcc \
     make \
@@ -23,11 +27,13 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     default-jre \
     perl \
-    python-is-python3 \
+    ppa:deadsnakes/ppa \
+    python3.12 \
     python3-pip \
     cython \
-    pypy-dev \
-    bash
+    git \
+    bash && \
+    ln -s /usr/bin/python3 /usr/bin/python
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
