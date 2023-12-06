@@ -91,18 +91,39 @@ RUN wget https://github.com/shenwei356/csvtk/releases/download/v0.23.0/csvtk_lin
     && mv csvtk /usr/local/bin/ \
     && rm csvtk_linux_amd64.tar.gz
 
-# Install the required Python modules
-# RUN pip3 install biopython argparse cython pysam
-# RUN export HTSLIB_CONFIGURE_OPTIONS=--enable-plugins && \
-#     pip3 install biopython argparse cython pysam
-
 # Download and install SPAdes
-RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
-    tar -xzf SPAdes-3.15.2-Linux.tar.gz && \
-    rm SPAdes-3.15.2-Linux.tar.gz
+# RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
+#     tar -xzf SPAdes-3.15.2-Linux.tar.gz && \
+#     rm SPAdes-3.15.2-Linux.tar.gz
+
+# install Rust
+RUN mkdir -m777 /opt/rust /opt/.cargo
+ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/.cargo PATH=/opt/.cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y && \
+    bash "/opt/.cargo/env"
+
+# install tidyVCF tool
+RUN cargo install tidyvcf
+
+# Install amplicon_sorter
+RUN pip install icecream poetry biopython matplotlib edlib && \
+    cd /opt && \
+    git clone https://github.com/nrminor/amplicon_sorter.git && \
+    cd amplicon_sorter && \
+    git checkout dev && \
+    poetry install && \
+    chmod +x amplicon_sorter.py
+ENV PATH="$PATH:/opt/amplicon_sorter"
+
+# Install read_zap_report
+RUN cd /opt && \
+    git clone https://github.com/nrminor/read-zap-report.git && \
+    cd read-zap-report && \
+    pip install -r requirements.txt && \
+    chmod +x read_zap_report.py
 
 # Add SPAdes to PATH
-ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
+# ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
 RUN echo "alias python=python3" >> ~/.bashrc
 
 # Run a bash shell by default when the container starts

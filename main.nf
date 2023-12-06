@@ -227,6 +227,15 @@ workflow {
 		ch_refseq
     )
 
+	RUN_SNPEFF (
+		CALL_HAPLOTYPE_VARIANTS.out,
+		ch_refseq
+	)
+
+	GENERATE_TIDY_VCF (
+		RUN_SNPEFF.out
+	)
+
 	GENERATE_IVAR_TABLE (
         MAP_ASSEMBLY_TO_REF.out,
 		ch_refseq,
@@ -1063,6 +1072,63 @@ process CALL_HAPLOTYPE_VARIANTS {
 	script:
 	"""
     bcftools mpileup -Ou -f ${refseq} ${bam} | bcftools call --ploidy 1 -mv -Ov -o ${name}.vcf
+	"""
+
+}
+
+process RUN_SNPEFF {
+
+    /*
+    */
+	
+	tag "${name}"
+    label "general"
+	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    cpus 4
+	
+	input:
+	tuple val(name), path(vcf), val(sample_id), val(read_support)
+	each path(refseq)
+	
+	output:
+	tuple val(name), path("${name}_annotated.vcf"), val(sample_id), val(read_support)
+	
+	script:
+	"""
+	REF=`seqkit seq --name --only-id ${refseq}`
+	snpEff -v \$REF ${vcf} > ${name}_annotated.vcf
+	"""
+
+}
+
+process GENERATE_TIDY_VCF {
+
+    /*
+    */
+	
+	tag "${name}"
+    label "general"
+	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    cpus 4
+	
+	input:
+	tuple val(name), path(vcf), val(sample_id), val(read_support)
+	each path(refseq)
+	
+	output:
+	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id), val(read_support)
+	
+	script:
+	"""
+	tidyvcf -i ${name}_annotated.vcf -s -o ${name}_annotated.tvcf.tsv
 	"""
 
 }

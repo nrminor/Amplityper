@@ -22,3 +22,8 @@ dev/
 *.txt
 *.sh
 remaining.lock
+
+
+# Added by cargo
+
+/target
