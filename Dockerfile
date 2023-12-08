@@ -8,8 +8,10 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt update && \
     apt install software-properties-common -y && \
     apt update && \
-    add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && apt-get install -y \
+    add-apt-repository ppa:deadsnakes/ppa -y && \
+    apt update && \
+    apt-get update && \
+    apt-get install -y \
     build-essential \
     gcc \
     make \
@@ -27,13 +29,11 @@ RUN apt update && \
     autoconf \
     default-jre \
     perl \
-    ppa:deadsnakes/ppa \
     python3.12 \
     python3-pip \
     cython \
     git \
-    bash && \
-    ln -s /usr/bin/python3 /usr/bin/python
+    bash
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
@@ -112,12 +112,13 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y &&
 RUN cargo install tidyvcf
 
 # Install amplicon_sorter
-RUN pip install icecream poetry biopython matplotlib edlib && \
+RUN pip install --no-cache-dir \
+    icecream poetry biopython matplotlib && \
+    pip wheel --no-cache-dir --use-pep517 "edlib (==1.3.9)" && \
     cd /opt && \
     git clone https://github.com/nrminor/amplicon_sorter.git && \
     cd amplicon_sorter && \
     git checkout dev && \
-    poetry install && \
     chmod +x amplicon_sorter.py
 ENV PATH="$PATH:/opt/amplicon_sorter"
 
