@@ -1099,7 +1099,7 @@ process RUN_SNPEFF {
 	
 	script:
 	"""
-	REF=`seqkit seq --name --only-id ${refseq}`
+	REF=`seqkit seq --name --only-id ${refseq}` && \
 	snpeff -v \$REF ${vcf} > ${name}_annotated.vcf
 	"""
 

@@ -139,6 +139,7 @@ RUN echo "alias python=python3" >> ~/.bashrc
 RUN cd /opt && \
     wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip && \
     unzip snpEff_latest_core.zip && \
+    rm snpEff_latest_core.zip && \
     chmod +x snpEff/exec/*
 ENV PATH=$PATH:/opt/snpEff/exec
 
