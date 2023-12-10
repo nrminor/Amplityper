@@ -1100,7 +1100,7 @@ process RUN_SNPEFF {
 	script:
 	"""
 	REF=`seqkit seq --name --only-id ${refseq}`
-	snpEff -v \$REF ${vcf} > ${name}_annotated.vcf
+	snpeff -v \$REF ${vcf} > ${name}_annotated.vcf
 	"""
 
 }
@@ -1121,7 +1121,6 @@ process GENERATE_TIDY_VCF {
 	
 	input:
 	tuple val(name), path(vcf), val(sample_id), val(read_support)
-	each path(refseq)
 	
 	output:
 	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id), val(read_support)

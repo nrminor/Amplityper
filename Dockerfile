@@ -20,6 +20,7 @@ RUN apt update && \
     gzip \
     pigz \
     zstd \
+    unzip \
     libbz2-dev \
     zlib1g-dev \
     libncurses5-dev \
@@ -34,6 +35,7 @@ RUN apt update && \
     cython \
     git \
     bash
+RUN apt-get install -y pkg-config
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
@@ -132,6 +134,20 @@ RUN cd /opt && \
 # Add SPAdes to PATH
 # ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
 RUN echo "alias python=python3" >> ~/.bashrc
+
+# Install snpEff
+RUN cd /opt && \
+    wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip && \
+    unzip snpEff_latest_core.zip && \
+    chmod +x snpEff/exec/*
+ENV PATH=$PATH:/opt/snpEff/exec
+
+# Install fastqc-rs
+RUN apt-get install -y libssl-dev && \
+    cargo install fastqc-rs
+
+# Install MultiQC
+RUN pip install multiqc
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]

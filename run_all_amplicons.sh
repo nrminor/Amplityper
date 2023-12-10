@@ -14,6 +14,8 @@ if [ -f "remaining_amplicons.txt" ]; then
     echo "Picking up from previous run."
     text_file="remaining_amplicons.txt"
 else
+    echo "No previous runs detected."
+    echo "Starting from first amplicon."
     text_file=amplicons.txt
 fi
 
