@@ -150,5 +150,22 @@ RUN apt-get install -y libssl-dev && \
 # Install MultiQC
 RUN pip install multiqc
 
+# Install SKESA (and the boost cpp libraries)
+RUN cd opt && \
+    wget https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz && \
+    tar -xvzf boost_1_83_0.tar.gz && \
+    rm boost_1_83_0.tar.gz && \
+    cd boost_1_83_0 && \
+    ./bootstrap.sh && \
+    apt-get install -y libbz2-dev && \
+    ./b2 && \
+    ./b2 install
+ENV BOOST_PATH=/opt/boost_1_83_0
+RUN apt-get install -y build-essential libtool autoconf cmake && \
+    cd /opt && \
+    git clone https://github.com/ncbi/SKESA && \
+    cd SKESA/ && \
+    make
+
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]
