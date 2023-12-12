@@ -148,14 +148,6 @@ workflow {
         GET_PRIMER_SEQS.out.bed
     )
 
-	if ( params.geneious_mode != true ) {
-
-			CALL_AMPLICON_VARIANTS (
-				CLIP_AMPLICONS.out
-			)
-
-	}
-
     BAM_TO_FASTQ (
         CLIP_AMPLICONS.out
     )
@@ -163,6 +155,10 @@ workflow {
     VALIDATE_SEQS (
         BAM_TO_FASTQ.out
     )
+
+	// FASTQC ()
+
+	// MULTIQC ()
 
 	if ( params.geneious_mode == true ) {
 
@@ -179,18 +175,17 @@ workflow {
 
 	} else {
 
-		ASSEMBLE_WITH_WHATSHAP (
-			VALIDATE_SEQS.out
-				.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-				.filter { it[2] >= params.min_reads }
-				.map { name, reads, count -> tuple( name, file(reads) ) },
-			CALL_AMPLICON_VARIANTS.out.vcf
-		)
-
 		if ( params.long_reads == true ) {
 
+			RUN_AMPLICON_SORTER (
+				VALIDATE_SEQS.out
+					.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+					.filter { it[2] >= params.min_reads }
+					.map { name, reads, count -> tuple( name, file(reads) ) }
+			)
+
 			RUN_HAIRSPLITTER (
-				ASSEMBLE_WITH_WHATSHAP.out.flatten()
+				RUN_AMPLICON_SORTER.out.flatten()
 			)
 
 			FILTER_ASSEMBLIES (
@@ -199,8 +194,15 @@ workflow {
 
 		} else {
 
+			ASSEMBLE_WITH_SKESA (
+				VALIDATE_SEQS.out
+					.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
+					.filter { it[2] >= params.min_reads }
+					.map { name, reads, count -> tuple( name, file(reads) ) }
+			)
+
 			FILTER_ASSEMBLIES (
-				ASSEMBLE_WITH_WHATSHAP.out.flatten()
+				ASSEMBLE_WITH_SKESA.out.flatten()
 			)
 
 		}
@@ -924,9 +926,63 @@ process ASSEMBLE_WITH_GENEIOUS {
 	"""
 }
 
-// process ASSEMBLE_WITH_WHATSHAP {}
+// process ASSEMBLE_WITH_SKESA {}
 
-// process RUN_HAIRSPLITTER {}
+process RUN_AMPLICON_SORTER {
+
+	/* */
+	
+	tag "${sample_id}"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
+	maxRetries 2
+
+	cpus 4
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+	tuple val(sample_id), path("${sample_id}")
+
+	script:
+	"""
+	amplicon_sorter.py \
+	-i ${reads} \
+	-o . \
+	-ar -maxr 100000 -np ${task.cpus}
+	"""
+
+}
+
+process RUN_HAIRSPLITTER {
+
+	/* */
+	
+	tag "${sample_id}"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
+	maxRetries 2
+
+	cpus 4
+	
+	input:
+	tuple val(sample_id), path(assembly_fasta)
+	
+	output:
+	tuple val(sample_id), path("${sample_id}_hairsplitter")
+
+	script:
+	"""
+	hairsplitter.py \
+	--assembly ${assembly_fasta} \
+	--fastq ${fastq} \
+	--technology ont \
+	--threads ${task.cpus} \
+	--output ${sample_id}_hairsplitter
+	"""
+
+}
 
 process FILTER_ASSEMBLIES {
 
