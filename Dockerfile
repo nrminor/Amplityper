@@ -37,13 +37,39 @@ RUN apt update && \
     bash
 RUN apt-get install -y pkg-config
 
-# Download and extract BBTools
-RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
-    tar -xzf bbmap.tar.gz && \
-    rm bbmap.tar.gz
+# Install SKESA (and the boost cpp libraries)
+RUN cd opt && \
+    wget https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz && \
+    tar -xvzf boost_1_83_0.tar.gz && \
+    rm boost_1_83_0.tar.gz && \
+    cd boost_1_83_0 && \
+    ./bootstrap.sh && \
+    apt-get install -y libbz2-dev && \
+    ./b2 && \
+    ./b2 install
+ENV BOOST_PATH=/opt/boost_1_83_0
+RUN apt-get install -y build-essential libtool autoconf cmake && \
+    cd /opt && \
+    git clone https://github.com/ncbi/SKESA && \
+    cd SKESA/ && \
+    make
+ENV PATH=$PATH:/opt/SKESA:/opt/boost_1_83_0/boost
 
-# Add BBTools to PATH
-ENV PATH="/bbmap:${PATH}"
+# install Rust
+RUN mkdir -m777 /opt/rust /opt/.cargo
+ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/.cargo PATH=/opt/.cargo/bin:$PATH
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y && \
+    bash "/opt/.cargo/env"
+
+# install tidyVCF tool
+RUN cargo install tidyvcf
+
+# Install fastqc-rs
+RUN apt-get install -y libssl-dev && \
+    cargo install fastqc-rs
+
+# Install MultiQC
+RUN pip install multiqc
 
 # Install HTSLib
 RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
@@ -104,14 +130,9 @@ RUN wget https://github.com/shenwei356/csvtk/releases/download/v0.23.0/csvtk_lin
 #     tar -xzf SPAdes-3.15.2-Linux.tar.gz && \
 #     rm SPAdes-3.15.2-Linux.tar.gz
 
-# install Rust
-RUN mkdir -m777 /opt/rust /opt/.cargo
-ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/.cargo PATH=/opt/.cargo/bin:$PATH
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | bash -s -- -y && \
-    bash "/opt/.cargo/env"
-
-# install tidyVCF tool
-RUN cargo install tidyvcf
+# Add SPAdes to PATH
+# ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
+RUN echo "alias python=python3" >> ~/.bashrc
 
 # Install amplicon_sorter
 RUN pip install --no-cache-dir \
@@ -130,10 +151,15 @@ RUN cd /opt && \
     cd read-zap-report && \
     pip install -r requirements.txt && \
     chmod +x read_zap_report.py
+ENV PATH="$PATH:/opt/read-zap-report/"
 
-# Add SPAdes to PATH
-# ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
-RUN echo "alias python=python3" >> ~/.bashrc
+# Download and extract BBTools
+RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \
+    tar -xzf bbmap.tar.gz && \
+    rm bbmap.tar.gz
+
+# Add BBTools to PATH
+ENV PATH="/bbmap:${PATH}"
 
 # Install snpEff
 RUN cd /opt && \
@@ -142,30 +168,6 @@ RUN cd /opt && \
     rm snpEff_latest_core.zip && \
     chmod +x snpEff/exec/*
 ENV PATH=$PATH:/opt/snpEff/exec
-
-# Install fastqc-rs
-RUN apt-get install -y libssl-dev && \
-    cargo install fastqc-rs
-
-# Install MultiQC
-RUN pip install multiqc
-
-# Install SKESA (and the boost cpp libraries)
-RUN cd opt && \
-    wget https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz && \
-    tar -xvzf boost_1_83_0.tar.gz && \
-    rm boost_1_83_0.tar.gz && \
-    cd boost_1_83_0 && \
-    ./bootstrap.sh && \
-    apt-get install -y libbz2-dev && \
-    ./b2 && \
-    ./b2 install
-ENV BOOST_PATH=/opt/boost_1_83_0
-RUN apt-get install -y build-essential libtool autoconf cmake && \
-    cd /opt && \
-    git clone https://github.com/ncbi/SKESA && \
-    cd SKESA/ && \
-    make
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]

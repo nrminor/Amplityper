@@ -74,5 +74,3 @@ done < remaining.lock
 
 # remove now unnecessary lock
 rm remaining.lock
-rm run_all_amplicons.log
-rm remaining_amplicons.txt

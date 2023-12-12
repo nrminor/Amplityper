@@ -244,13 +244,11 @@ workflow {
 		ch_refgff
 	)
 
-    // GENERATE_REPORT (
-    //     DOWNSAMPLE_ASSEMBLIES.out,
-    //     MAP_ASSEMBLY_TO_REF.out,
-    //     CALL_CONSENSUS_SEQS.out,
-    //     CALL_HAPLOTYPE_VARIANTS.out
-    // )
-	
+	// GENERATE_FINAL_REPORT (
+	// 	CALL_CONSENSUS_SEQS.out.collect(),
+	// 	GENERATE_TIDY_VCF.out.collect(),
+	// 	GENERATE_IVAR_TABLE.out.collect()
+	// )
 	
 }
 // --------------------------------------------------------------- //
@@ -1216,30 +1214,30 @@ process GENERATE_IVAR_TABLE {
 
 }
 
-// process GENERATE_REPORT {
+process GENERATE_FINAL_REPORT {
 	
-// 	// This process does something described here
+	/* */
 	
-// 	tag "${sample_id}"
-// 	publishDir params.results, mode: 'copy'
+	tag "${sample_id}"
+	publishDir params.amplicon_results, mode: 'copy'
 	
-// 	memory 1.GB
-// 	cpus 1
-// 	time '10minutes'
+	input:
+	path consensus_fasta
+	path tvcf_files
+	path ivar_tables
 	
-// 	input:
+	output:
+	path "final_report.xlsx", emit: report_xlsx
+	path "*.arrow", emit: arrow_data
 	
-	
-// 	output:
-	
-	
-// 	when:
-	
-	
-// 	script:
-// 	"""
-	
-// 	"""
-// }
+	script:
+	"""
+	read_zap_report.py \
+	--results_dir ${params.amplicon_results} \
+	--gene_bed ${} \
+	--config ${params.reporting_config}
+	"""
+
+}
 
 // --------------------------------------------------------------- //
