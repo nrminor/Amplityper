@@ -12,7 +12,6 @@ report.html*
 *.png.*
 *.fastq*
 *.fq*
-*.fa*
 input/
 scratch/
 sandbox/
