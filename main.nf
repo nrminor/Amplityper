@@ -52,9 +52,29 @@ workflow {
 	ch_refgff = Channel
 		.fromPath( params.gff )
 	
+	ch_sc2_genes = Channel
+		.fromPath( params.sc2_genes )
+	
+	ch_r_config = Channel
+		.fromPath( params.gene_to_bed_config )
+	
 	// Workflow steps
+	RESPLICE_PRIMERS (
+		ch_primer_bed
+	)
+
+	GET_GENE_BED (
+		ch_r_config,
+		ch_sc2_genes
+	)
+
+	CROSS_REF_WITH_GENES (
+		ch_primer_bed,
+		GET_GENE_BED.out
+	)
+
     GET_PRIMER_SEQS (
-        ch_primer_bed
+        RESPLICE_PRIMERS.out
     )
 
     EXTRACT_REF_AMPLICON (
@@ -244,11 +264,12 @@ workflow {
 		ch_refgff
 	)
 
-	// GENERATE_FINAL_REPORT (
-	// 	CALL_CONSENSUS_SEQS.out.collect(),
-	// 	GENERATE_TIDY_VCF.out.collect(),
-	// 	GENERATE_IVAR_TABLE.out.collect()
-	// )
+	GENERATE_FINAL_REPORT (
+		CALL_CONSENSUS_SEQS.out.collect(),
+		GENERATE_TIDY_VCF.out.collect(),
+		GENERATE_IVAR_TABLE.out.collect(),
+		CROSS_REF_WITH_GENES.out
+	)
 	
 }
 // --------------------------------------------------------------- //
@@ -301,6 +322,81 @@ params.ivar_tables = params.assembly_results + "/05_ivar_tables"
 
 // PROCESS SPECIFICATION 
 // --------------------------------------------------------------- //
+
+process RESPLICE_PRIMERS {
+
+    /*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+    path bed_file
+
+    output:
+    path "respliced.bed"
+
+    script:
+    """
+	resplice_primers.py -i ${bed_file}
+    """
+
+}
+
+process GET_GENE_BED {
+
+	/*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+    path config
+	path fasta
+
+    output:
+    path "respliced.bed"
+
+    script:
+    """
+	ncbiFastaToBED.R
+    """
+
+}
+
+process CROSS_REF_WITH_GENES {
+
+	/*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+    path bed
+
+    output:
+    path "${bed_name}_with_genes.bed"
+
+    script:
+	bed_name = file(bed.toString()).getSimpleName()
+    """
+	bedtools intersect -a ${bed} -b genes.bed -wb | \
+	csvtk cut -f 1,2,3,4,5,6,10 -t > ${bed_name}_with_genes.bed
+    """
+
+}
 
 process GET_PRIMER_SEQS {
 
@@ -1225,6 +1321,7 @@ process GENERATE_FINAL_REPORT {
 	path consensus_fasta
 	path tvcf_files
 	path ivar_tables
+	each path(gene_bed)
 	
 	output:
 	path "final_report.xlsx", emit: report_xlsx
