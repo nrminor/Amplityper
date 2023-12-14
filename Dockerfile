@@ -37,24 +37,6 @@ RUN apt update && \
     bash
 RUN apt-get install -y pkg-config
 
-# Install SKESA (and the boost cpp libraries)
-RUN cd opt && \
-    wget https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz && \
-    tar -xvzf boost_1_83_0.tar.gz && \
-    rm boost_1_83_0.tar.gz && \
-    cd boost_1_83_0 && \
-    ./bootstrap.sh && \
-    apt-get install -y libbz2-dev && \
-    ./b2 && \
-    ./b2 install
-ENV BOOST_PATH=/opt/boost_1_83_0
-RUN apt-get install -y build-essential libtool autoconf cmake && \
-    cd /opt && \
-    git clone https://github.com/ncbi/SKESA && \
-    cd SKESA/ && \
-    make
-ENV PATH=$PATH:/opt/SKESA:/opt/boost_1_83_0/boost
-
 # install Rust
 RUN mkdir -m777 /opt/rust /opt/.cargo
 ENV RUSTUP_HOME=/opt/rust CARGO_HOME=/opt/.cargo PATH=/opt/.cargo/bin:$PATH
@@ -125,33 +107,16 @@ RUN wget https://github.com/shenwei356/csvtk/releases/download/v0.23.0/csvtk_lin
     && mv csvtk /usr/local/bin/ \
     && rm csvtk_linux_amd64.tar.gz
 
-# Download and install SPAdes
-# RUN wget http://cab.spbu.ru/files/release3.15.2/SPAdes-3.15.2-Linux.tar.gz && \
-#     tar -xzf SPAdes-3.15.2-Linux.tar.gz && \
-#     rm SPAdes-3.15.2-Linux.tar.gz
-
-# Add SPAdes to PATH
-# ENV PATH="/SPAdes-3.15.2-Linux/bin:${PATH}"
 RUN echo "alias python=python3" >> ~/.bashrc
 
-# Install amplicon_sorter
-RUN pip install --no-cache-dir \
-    icecream poetry biopython matplotlib && \
-    pip wheel --no-cache-dir --use-pep517 "edlib (==1.3.9)" && \
-    cd /opt && \
-    git clone https://github.com/nrminor/amplicon_sorter.git && \
-    cd amplicon_sorter && \
-    git checkout dev && \
-    chmod +x amplicon_sorter.py
-ENV PATH="$PATH:/opt/amplicon_sorter"
-
-# Install read_zap_report
-RUN cd /opt && \
-    git clone https://github.com/nrminor/read-zap-report.git && \
-    cd read-zap-report && \
-    pip install -r requirements.txt && \
-    chmod +x read_zap_report.py
-ENV PATH="$PATH:/opt/read-zap-report/"
+# Install vsearch
+RUN wget https://github.com/torognes/vsearch/archive/v2.26.1.tar.gz && \
+    tar xzf v2.26.1.tar.gz && \
+    cd vsearch-2.26.1 && \
+    ./autogen.sh && \
+    ./configure CFLAGS="-O3" CXXFLAGS="-O3" && \
+    make && \
+    make install
 
 # Download and extract BBTools
 RUN wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz && \

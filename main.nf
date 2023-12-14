@@ -180,72 +180,23 @@ workflow {
 
 	// MULTIQC ()
 
-	if ( params.geneious_mode == true ) {
+	IDENTIFY_HAPLOTYPES (
+		VALIDATE_SEQS.out
+	)
 
-		ASSEMBLE_WITH_GENEIOUS (
-			VALIDATE_SEQS.out
-				.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-				.filter { it[2] >= params.min_reads }
-				.map { name, reads, count -> tuple( name, file(reads) ) }
-		)
+	NAME_HAPLOTYPES (
+		IDENTIFY_HAPLOTYPES.out
+	)
 
-		FILTER_ASSEMBLIES (
-			ASSEMBLE_WITH_GENEIOUS.out.flatten()
-		)
-
-	} else {
-
-		if ( params.long_reads == true ) {
-
-			RUN_AMPLICON_SORTER (
-				VALIDATE_SEQS.out
-					.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-					.filter { it[2] >= params.min_reads }
-					.map { name, reads, count -> tuple( name, file(reads) ) }
-			)
-
-			RUN_HAIRSPLITTER (
-				RUN_AMPLICON_SORTER.out.flatten()
-			)
-
-			FILTER_ASSEMBLIES (
-				RUN_HAIRSPLITTER.out
-			)
-
-		} else {
-
-			ASSEMBLE_WITH_SKESA (
-				VALIDATE_SEQS.out
-					.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-					.filter { it[2] >= params.min_reads }
-					.map { name, reads, count -> tuple( name, file(reads) ) }
-			)
-
-			FILTER_ASSEMBLIES (
-				ASSEMBLE_WITH_SKESA.out.flatten()
-			)
-
-		}
-
-	}
-
-    MAP_ASSEMBLY_TO_REF (
-        FILTER_ASSEMBLIES.out
-			.map { filename, reads, id -> tuple( filename, file(reads), id, file(reads).countFastq() ) }
-			.filter { it[3] >= params.min_reads },
+    MAP_HAPLOTYPE_TO_REF (
+        NAME_HAPLOTYPES.out
+			.splitFasta( by: 1 )
+			.map { fasta -> tuple( fasta.record[0], file(fasta) ) },
 		ch_refseq
     )
 
-	CALL_CONSENSUS_SEQS (
-		MAP_ASSEMBLY_TO_REF.out
-	)
-
-	EXTRACT_AMPLICON_CONSENSUS (
-		CALL_CONSENSUS_SEQS.out
-	)
-
     CALL_HAPLOTYPE_VARIANTS (
-        MAP_ASSEMBLY_TO_REF.out,
+        MAP_HAPLOTYPE_TO_REF.out,
 		ch_refseq
     )
 
@@ -259,17 +210,16 @@ workflow {
 	)
 
 	GENERATE_IVAR_TABLE (
-        MAP_ASSEMBLY_TO_REF.out,
+        MAP_HAPLOTYPE_TO_REF.out,
 		ch_refseq,
 		ch_refgff
 	)
 
-	GENERATE_FINAL_REPORT (
-		CALL_CONSENSUS_SEQS.out.collect(),
-		GENERATE_TIDY_VCF.out.collect(),
-		GENERATE_IVAR_TABLE.out.collect(),
-		CROSS_REF_WITH_GENES.out
-	)
+	// GENERATE_FINAL_REPORT (
+	// 	GENERATE_TIDY_VCF.out.collect(),
+	// 	GENERATE_IVAR_TABLE.out.collect(),
+	// 	CROSS_REF_WITH_GENES.out
+	// )
 	
 }
 // --------------------------------------------------------------- //
@@ -306,13 +256,12 @@ params.qtrim = params.preprocessing + "/09_quality_trim"
 params.clipped = params.preprocessing + "/10_clipped_reads"
 params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
 
-// assembly results
-params.assembly_results = params.amplicon_results + "/02_assembly_results"
-params.assembly_reads = params.assembly_results + "/01_assembly_reads"
-params.aligned_assembly = params.assembly_results + "/02_aligned_assemblies"
-params.consensus = params.assembly_results + "/03_contigs"
-params.variants = params.assembly_results + "/04_contig_VCFs"
-params.ivar_tables = params.assembly_results + "/05_ivar_tables"
+// haplotyping results
+params.haplotyping_results = params.amplicon_results + "/02_haplotyping_results"
+params.haplotypes = params.haplotyping_results + "/02_haplotypes"
+params.aligned_haplotypes = params.haplotyping_results + "/02_aligned_haplotypes"
+params.variants = params.haplotyping_results + "/03_contig_VCFs"
+params.ivar_tables = params.haplotyping_results + "/04_ivar_tables"
 
 
 // --------------------------------------------------------------- //
@@ -595,7 +544,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     tag "${sample_id}"
     label "general"
-	publishDir params.amplicon_reads, mode: params.pubMode, overwrite: true
+	publishDir params.amplicon_reads, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -635,7 +584,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.optical_dedupe, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -675,7 +624,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.low_quality, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.low_quality, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -715,7 +664,7 @@ process REMOVE_ARTIFACTS {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -748,7 +697,7 @@ process ERROR_CORRECT_PHASE_ONE {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -781,7 +730,7 @@ process ERROR_CORRECT_PHASE_TWO {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	cpus 4
 	memory 3.GB
@@ -811,7 +760,7 @@ process ERROR_CORRECT_PHASE_THREE {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.error_correct, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -844,7 +793,7 @@ process QUALITY_TRIM {
 
 	tag "${sample_id}"
     label "general"
-	publishDir params.qtrim, pattern: "*.fastq.gz", mode: params.pubMode, overwrite: true
+	publishDir params.qtrim, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -903,7 +852,7 @@ process CLIP_AMPLICONS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.clipped, mode: params.pubMode, overwrite: true
+	publishDir params.clipped, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -938,7 +887,7 @@ process BAM_TO_FASTQ {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.clipped, mode: params.pubMode, overwrite: true
+	publishDir params.clipped, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -965,7 +914,7 @@ process VALIDATE_SEQS {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir params.complete_amplicon, mode: params.pubMode
+	publishDir params.complete_amplicon, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -989,128 +938,80 @@ process VALIDATE_SEQS {
 	"""
 }
 
-process ASSEMBLE_WITH_GENEIOUS {
+process IDENTIFY_HAPLOTYPES {
 
-    /*
+	/*
     */
 	
 	tag "${sample_id}"
-    // label "general"
+    label "general"
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 8
+	cpus 1
 	
 	input:
 	tuple val(sample_id), path(reads)
 	
 	output:
-	path "*.fastq.gz"
+	tuple val(sample_id), path("${sample_id}_deduped.fasta"), emit: deduped_fasta
+	path "${sample_id}_${params.desired_amplicon}_haplotype_metadata.tsv", emit: metadata
 
-	when:
-	params.geneious_mode == true
-	
 	script:
 	"""
-	geneious -i ${reads} -x ${params.assembly_profile} -o ${sample_id}.fastq.gz --multi-file && \
-	for file in ${sample_id}*Assembly*.fastq.gz; do
-		mv "\$file" "\${file// /_}"
-	done
+	vsearch \
+	--fastx_uniques ${reads} \
+	--fastaout tmp.fasta \
+	--sizeout \
+	--minuniquesize ${params.min_reads} \
+	--tabbedout tmp.tsv \
+	--strand both
+
+	seqkit replace -p ";" -r " " tmp.fasta -o ${sample_id}_deduped.fasta && \
+	rm tmp.fasta
+
+	csvtk add-header -t \
+	--names orig_label,clust_label,clust_index,seq_index_in_clust,clust_abundance,first_seq_label \
+	tmp.tsv | \
+	csvtk filter -t --filter "clust_abundance>=${params.min_reads}" \
+	> ${sample_id}_${params.desired_amplicon}_haplotype_metadata.tsv
+
+	rm tmp.tsv
 	"""
+
 }
 
-// process ASSEMBLE_WITH_SKESA {}
+process NAME_HAPLOTYPES {
 
-process RUN_AMPLICON_SORTER {
-
-	/* */
+	/*
+    */
 	
 	tag "${sample_id}"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
-	maxRetries 2
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), path(reads)
-	
-	output:
-	tuple val(sample_id), path("${sample_id}")
-
-	script:
-	"""
-	amplicon_sorter.py \
-	-i ${reads} \
-	-o . \
-	-ar -maxr 100000 -np ${task.cpus}
-	"""
-
-}
-
-process RUN_HAIRSPLITTER {
-
-	/* */
-	
-	tag "${sample_id}"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : errorMode }
-	maxRetries 2
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), path(assembly_fasta)
-	
-	output:
-	tuple val(sample_id), path("${sample_id}_hairsplitter")
-
-	script:
-	"""
-	hairsplitter.py \
-	--assembly ${assembly_fasta} \
-	--fastq ${fastq} \
-	--technology ont \
-	--threads ${task.cpus} \
-	--output ${sample_id}_hairsplitter
-	"""
-
-}
-
-process FILTER_ASSEMBLIES {
-
-	/* */
-
-	tag "${file_name}"
     label "general"
 	publishDir "${params.assembly_reads}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 4
+	cpus 1
 
 	input:
-	path assembly_reads
+	tuple val(sample_id), path(fasta) 
 
 	output:
-	tuple val(file_name), path("*.fastq.gz"), val(sample_id)
-
-	when:
-	assembly_reads.getSimpleName().contains("Contig")
+	path "${sample_id}_${params.desired_amplicon}_haplotypes.fasta"
 
 	script:
-	sample_id = assembly_reads.getSimpleName().split("_L00")[0]
-	contig_num = assembly_reads.getName().split(".fastq.gz")[0].replace("Unpaired", "").split("_")[-1]
-	file_name = sample_id + "_contig" + contig_num
 	"""
-	clumpify.sh in="${assembly_reads}" out="${file_name}.fastq.gz" reorder
+	seqkit replace -p ";" -r " " ${fasta} | \
+	seqkit replace -p "^." -r "${sample_id}_${params.desired_amplicon}_haplotype{nr}" \
+	-o ${sample_id}_${params.desired_amplicon}_haplotypes.fasta
 	"""
 
 }
 
-process MAP_ASSEMBLY_TO_REF {
+process MAP_HAPLOTYPE_TO_REF {
 
     /*
     */
@@ -1125,76 +1026,18 @@ process MAP_ASSEMBLY_TO_REF {
     cpus 4
 	
 	input:
-	tuple val(name), path(assembly_reads), val(sample_id), val(read_support)
+	tuple val(name), path(haplotype)
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("*.bam"), val(sample_id), val(read_support)
+	tuple val(name), path("*.bam"), val(sample_id)
 	
 	script:
+	sample_id = name.toString().split("_")[0]
 	"""
-	bbmap.sh int=f ref=${refseq} in=${assembly_reads} out=stdout.sam maxindel=200 | \
+	bbmap.sh int=f ref=${refseq} in=${haplotype} out=stdout.sam maxindel=200 | \
 	reformat.sh in=stdin.sam out="${name}.bam"
 	"""
-
-}
-
-process CALL_CONSENSUS_SEQS {
-
-    /*
-    */
-	
-	tag "${name}"
-    label "iVar"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    cpus 4
-	
-	input:
-	tuple val(name), path(bam), val(sample_id), val(read_support)
-	
-	output:
-	tuple val(name), path("${name}_consensus.fa*"), val(sample_id), val(read_support)
-	
-	script:
-	"""
-	samtools sort "${bam}" | \
-	samtools mpileup \
-	-aa -A -d 0 -Q 0 \
-	- | ivar consensus \
-	-t 0 -m 1 -q 0 -k \
-	-p ${name}_consensus
-	"""
-
-}
-
-process EXTRACT_AMPLICON_CONSENSUS {
-
-	/* */
-	
-	tag "${name}"
-    label "general"
-	publishDir "${params.consensus}/${sample_id}", mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-	
-	input:
-	tuple val(name), path(fasta), val(sample_id), val(read_support)
-	
-	output:
-	tuple val(name), path("${name}_${params.desired_amplicon}_consensus.fa*"), val(sample_id), val(read_support)
-	
-	script:
-	"""
-	cat ${fasta} | \
-	seqkit replace \
-	-p \$ -r "_readsupport_${read_support}" \
-	-o "${name}_${params.desired_amplicon}_consensus.fa"
-	"""
-
 
 }
 
@@ -1213,11 +1056,11 @@ process CALL_HAPLOTYPE_VARIANTS {
     cpus 4
 	
 	input:
-	tuple val(name), path(bam), val(sample_id), val(read_support)
+	tuple val(name), path(bam), val(sample_id)
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("${name}.vcf"), val(sample_id), val(read_support)
+	tuple val(name), path("${name}.vcf"), val(sample_id)
 	
 	script:
 	"""
@@ -1241,11 +1084,11 @@ process RUN_SNPEFF {
     cpus 4
 	
 	input:
-	tuple val(name), path(vcf), val(sample_id), val(read_support)
+	tuple val(name), path(vcf), val(sample_id)
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("${name}_annotated.vcf"), val(sample_id), val(read_support)
+	tuple val(name), path("${name}_annotated.vcf"), val(sample_id)
 	
 	script:
 	"""
@@ -1270,10 +1113,10 @@ process GENERATE_TIDY_VCF {
     cpus 4
 	
 	input:
-	tuple val(name), path(vcf), val(sample_id), val(read_support)
+	tuple val(name), path(vcf), val(sample_id)
 	
 	output:
-	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id), val(read_support)
+	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id)
 	
 	script:
 	"""
@@ -1295,7 +1138,7 @@ process GENERATE_IVAR_TABLE {
 	maxRetries 2
 
 	input:
-	tuple val(name), path(bam), val(sample_id), val(read_support)
+	tuple val(name), path(bam), val(sample_id)
 	each path(refseq)
 	each path(refgff)
 
@@ -1318,7 +1161,6 @@ process GENERATE_FINAL_REPORT {
 	publishDir params.amplicon_results, mode: 'copy'
 	
 	input:
-	path consensus_fasta
 	path tvcf_files
 	path ivar_tables
 	each path(gene_bed)
