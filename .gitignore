@@ -18,7 +18,6 @@ sandbox/
 data/
 dev/
 *.log
-*.txt
 remaining.lock
 
 

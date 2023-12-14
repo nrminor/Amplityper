@@ -1,8 +1,5 @@
 #!/usr/bin/env Rscript
 
-renv::activate()
-renv::restore(prompt = FALSE)
-
 # load some helpful tidyverse packages
 suppressPackageStartupMessages(c(
   library(readr),
@@ -10,20 +7,9 @@ suppressPackageStartupMessages(c(
   library(stringr),
   library(tidyr)
 ))
-renv::snapshot()
 
 # load the input and output file names from the config file
 source("config.R")
-
-# set the columns for the data frame that will be made by splitting up the header
-columns <- c(
-  "gene number",
-  "gene",
-  "tag",
-  "db_xref",
-  "location",
-  "gbkey"
-)
 
 # read the file, process it, and write the bed file in a pipeline
 read_delim(gene_fasta, delim = "\t",

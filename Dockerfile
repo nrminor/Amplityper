@@ -50,9 +50,6 @@ RUN cargo install tidyvcf
 RUN apt-get install -y libssl-dev && \
     cargo install fastqc-rs
 
-# Install MultiQC
-RUN pip install multiqc
-
 # Install HTSLib
 RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
     tar -vxjf htslib-1.17.tar.bz2 && \
@@ -107,8 +104,6 @@ RUN wget https://github.com/shenwei356/csvtk/releases/download/v0.23.0/csvtk_lin
     && mv csvtk /usr/local/bin/ \
     && rm csvtk_linux_amd64.tar.gz
 
-RUN echo "alias python=python3" >> ~/.bashrc
-
 # Install vsearch
 RUN wget https://github.com/torognes/vsearch/archive/v2.26.1.tar.gz && \
     tar xzf v2.26.1.tar.gz && \
@@ -133,6 +128,24 @@ RUN cd /opt && \
     rm snpEff_latest_core.zip && \
     chmod +x snpEff/exec/*
 ENV PATH=$PATH:/opt/snpEff/exec
+
+# make sure the image uses the correct version of Python
+RUN cd /usr/bin && \
+    unlink python && \
+    ln -s /usr/bin/python3.12 python && \
+    unlink python3 && \
+    ln -s /usr/bin/python3.12 python3
+
+# Install MultiQC and a few other things
+RUN apt install -y python3.12-distutils
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3
+# RUN python3 -m pip install multiqc
+COPY requirements.txt /opt/
+RUN python3 -m pip install -r /opt/requirements.txt
+
+# install R
+RUN apt install -y r-base && \
+    Rscript -e "install.packages('tidyverse', clean = TRUE)"
 
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]

@@ -266,7 +266,7 @@ def compile_data_with_io(file_list: List[Path]) -> Result[pl.LazyFrame, str]:
 
 def collect_file_lists(
     results_dir: Path, pattern1: Path, pattern2: Path, pattern3: Path
-) -> Result[Tuple[List[Path]], str]:
+) -> Result[Tuple[List[Path], List[Path], List[Path]], str]:
     """
         Function `collect_file_lists()` quarterbacks sequential executions of
         the `construct_file_list()` function, each with a different wildcard

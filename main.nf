@@ -185,13 +185,12 @@ workflow {
 	)
 
 	NAME_HAPLOTYPES (
-		IDENTIFY_HAPLOTYPES.out
+		IDENTIFY_HAPLOTYPES.out.deduped_fasta
 	)
 
     MAP_HAPLOTYPE_TO_REF (
         NAME_HAPLOTYPES.out
-			.splitFasta( by: 1 )
-			.map { fasta -> tuple( fasta.record[0], file(fasta) ) },
+			.splitFasta( by: 1, file: true ),
 		ch_refseq
     )
 
@@ -312,11 +311,11 @@ process GET_GENE_BED {
 	path fasta
 
     output:
-    path "respliced.bed"
+    path "*.bed"
 
     script:
     """
-	ncbiFastaToBED.R
+	ncbi_fasta_to_bed.R
     """
 
 }
@@ -333,15 +332,21 @@ process CROSS_REF_WITH_GENES {
 	maxRetries 2
 
     input:
-    path bed
+    path primer_bed
+	path gene_bed
 
     output:
     path "${bed_name}_with_genes.bed"
 
     script:
-	bed_name = file(bed.toString()).getSimpleName()
+	bed_name = file(primer_bed.toString()).getSimpleName()
     """
-	bedtools intersect -a ${bed} -b genes.bed -wb | \
+	ref=`csvtk replace -t ${primer_bed} -f 1 -p " " -r "" | cut -f 1 | uniq`
+	unmatched=`csvtk replace -t ${gene_bed} -f 1 -p " " -r "" | cut -f 1 | uniq`
+
+	csvtk replace -t ${gene_bed} -p \$unmatched -r \$ref -o corrected.bed
+
+	bedtools intersect -a ${primer_bed} -b corrected.bed -wb | \
 	csvtk cut -f 1,2,3,4,5,6,10 -t > ${bed_name}_with_genes.bed
     """
 
@@ -989,7 +994,7 @@ process NAME_HAPLOTYPES {
 	
 	tag "${sample_id}"
     label "general"
-	publishDir "${params.assembly_reads}/${sample_id}", mode: 'copy', overwrite: true
+	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -1016,9 +1021,7 @@ process MAP_HAPLOTYPE_TO_REF {
     /*
     */
 	
-	tag "${name}"
     label "general"
-	publishDir "${params.aligned_assembly}/${sample_id}", mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -1026,17 +1029,17 @@ process MAP_HAPLOTYPE_TO_REF {
     cpus 4
 	
 	input:
-	tuple val(name), path(haplotype)
+	path haplotype
 	each path(refseq)
 	
 	output:
-	tuple val(name), path("*.bam"), val(sample_id)
+	tuple env(hap_name), path("*.bam")
 	
 	script:
-	sample_id = name.toString().split("_")[0]
 	"""
+	hap_name=`seqkit seq --name --only-id ${haplotype}`
 	bbmap.sh int=f ref=${refseq} in=${haplotype} out=stdout.sam maxindel=200 | \
-	reformat.sh in=stdin.sam out="${name}.bam"
+	reformat.sh in=stdin.sam out="\${hap_name}.bam"
 	"""
 
 }
@@ -1056,13 +1059,14 @@ process CALL_HAPLOTYPE_VARIANTS {
     cpus 4
 	
 	input:
-	tuple val(name), path(bam), val(sample_id)
+	tuple val(name), path(bam)
 	each path(refseq)
 	
 	output:
 	tuple val(name), path("${name}.vcf"), val(sample_id)
 	
 	script:
+	sample_id = name.toString().split("_")[0]
 	"""
     bcftools mpileup -Ou -f ${refseq} ${bam} | bcftools call --ploidy 1 -mv -Ov -o ${name}.vcf
 	"""
@@ -1138,7 +1142,7 @@ process GENERATE_IVAR_TABLE {
 	maxRetries 2
 
 	input:
-	tuple val(name), path(bam), val(sample_id)
+	tuple val(name), path(bam)
 	each path(refseq)
 	each path(refgff)
 
@@ -1146,6 +1150,7 @@ process GENERATE_IVAR_TABLE {
 	path "*.tsv"
 
 	script:
+	sample_id = name.toString().split("_")[0]
 	"""
 	samtools mpileup -aa -A -d 0 -B -Q 0 --reference ${refseq} ${bam} | \
 	ivar variants -p ${name} -t 0 -r ${refseq} -g ${refgff}
