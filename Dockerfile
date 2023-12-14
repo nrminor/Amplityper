@@ -93,7 +93,7 @@ RUN wget https://github.com/arq5x/bedtools2/releases/download/v2.31.0/bedtools-2
 ENV PATH="$PATH:/htslib-1.17:/bcftools-1.17:/samtools-1.17"
 
 # Install seqkit
-RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.1.0/seqkit_linux_amd64.tar.gz \
+RUN wget https://github.com/shenwei356/seqkit/releases/download/v2.6.1/seqkit_linux_amd64.tar.gz \
     && tar -xvzf seqkit_linux_amd64.tar.gz \
     && mv seqkit /usr/local/bin/ \
     && rm seqkit_linux_amd64.tar.gz

@@ -1010,7 +1010,8 @@ process NAME_HAPLOTYPES {
 	script:
 	"""
 	seqkit replace -p ";" -r " " ${fasta} | \
-	seqkit replace -p "^." -r "${sample_id}_${params.desired_amplicon}_haplotype{nr}" \
+	seqkit replace -p "^." -r "${sample_id}_${params.desired_amplicon}_haplotype " \
+	| seqkit rename --rename-1st-rec \
 	-o ${sample_id}_${params.desired_amplicon}_haplotypes.fasta
 	"""
 
