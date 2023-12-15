@@ -90,6 +90,9 @@ workflow {
 		SUBSET_BED_FILE.out.bed
 	)
 
+	println "The workflow found ${SPLIT_PRIMER_COMBOS.out.count().view()} possible combinations of primers:"
+	
+
 	GET_PRIMER_SEQS (
 		SPLIT_PRIMER_COMBOS.out.flatten()
 	)
