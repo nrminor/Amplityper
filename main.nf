@@ -629,7 +629,7 @@ process FIND_COMPLETE_AMPLICONS {
     tuple val(primer_combo), path(search_patterns)
     
     output:
-    tuple val(sample_id), path("${sample_id}_amplicons.fastq.gz")
+    tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_amplicons.fastq.gz")
 
     script:
     """
@@ -644,7 +644,7 @@ process FIND_COMPLETE_AMPLICONS {
 	--max-mismatch 3 \
 	--by-seq \
 	--pattern `tail -n 1 ${search_patterns}` \
-    -o ${sample_id}_amplicons.fastq.gz
+    -o ${sample_id}_${primer_combo}_amplicons.fastq.gz
     """
 
 }
@@ -666,23 +666,23 @@ process REMOVE_OPTICAL_DUPLICATES {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_deduped.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_deduped.fastq.gz")
 
 	script:
 	if ( sample_id.toString().contains("SRR") )
 		"""
 		rename.sh \
 		in=${reads} \
-		out=${sample_id}_deduped.fastq.gz \
+		out=${sample_id}_${primer_combo}_deduped.fastq.gz \
 		addpairnum=t
 		"""
 	else
 		"""
 		clumpify.sh -Xmx2g in=`realpath ${reads}` \
-		out=${sample_id}_deduped.fastq.gz \
+		out=${sample_id}_${primer_combo}_deduped.fastq.gz \
 		threads=${task.cpus} \
 		optical tossbrokenreads reorder
 		"""
@@ -706,23 +706,23 @@ process REMOVE_LOW_QUALITY_REGIONS {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_filtered.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_filtered.fastq.gz")
 
 	script:
 	if ( sample_id.toString().contains("SRR") )
 		"""
 		clumpify.sh -Xmx2g in=`realpath ${reads}` \
-		out=${sample_id}_filtered.fastq.gz \
+		out=${sample_id}_${primer_combo}_filtered.fastq.gz \
 		threads=${task.cpus} \
 		reorder markduplicates
 		"""
 	else
 		"""
 		filterbytile.sh -Xmx2g in=`realpath ${reads}` \
-		out=${sample_id}_filtered.fastq.gz \
+		out=${sample_id}_${primer_combo}_filtered.fastq.gz \
 		threads=${task.cpus}
 		"""
 
@@ -746,15 +746,15 @@ process REMOVE_ARTIFACTS {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_remove_artifacts.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_remove_artifacts.fastq.gz")
 
 	script:
 	"""
 	bbduk.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_remove_artifacts.fastq.gz \
+	out=${sample_id}_${primer_combo}_remove_artifacts.fastq.gz \
 	k=31 ref=artifacts,phix ordered cardinality \
 	threads=${task.cpus}
 	"""
@@ -779,17 +779,17 @@ process ERROR_CORRECT_PHASE_ONE {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_error_correct1.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_error_correct1.fastq.gz")
 
 	script:
 	"""
 	bbmerge.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_error_correct1.fastq.gz \
+	out=${sample_id}_${primer_combo}_error_correct1.fastq.gz \
 	ecco mix vstrict ordered \
-	ihist=${sample_id}_ihist_merge1.txt \
+	ihist=${sample_id}_${primer_combo}_ihist_merge1.txt \
 	threads=${task.cpus}
 	"""
 
@@ -809,15 +809,15 @@ process ERROR_CORRECT_PHASE_TWO {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_error_correct2.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_error_correct2.fastq.gz")
 
 	script:
 	"""
 	clumpify.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_error_correct2.fastq.gz \
+	out=${sample_id}_${primer_combo}_error_correct2.fastq.gz \
 	ecc passes=4 reorder \
 	threads=${task.cpus} \
 	-Xmx2g
@@ -842,15 +842,15 @@ process ERROR_CORRECT_PHASE_THREE {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_error_correct3.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_error_correct3.fastq.gz")
 
 	script:
 	"""
 	tadpole.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_error_correct3.fastq.gz \
+	out=${sample_id}_${primer_combo}_error_correct3.fastq.gz \
 	ecc k=62 ordered \
 	threads=${task.cpus}
 	"""
@@ -875,15 +875,15 @@ process QUALITY_TRIM {
 	memory 3.GB
 
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 
 	output:
-	tuple val(sample_id), path("${sample_id}_qtrimmed.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_qtrimmed.fastq.gz")
 
 	script:
 	"""
 	bbduk.sh -Xmx2g in=`realpath ${reads}` \
-	out=${sample_id}_qtrimmed.fastq.gz \
+	out=${sample_id}_${primer_combo}_qtrimmed.fastq.gz \
 	qtrim=rl trimq=10 minlen=70 ordered \
 	threads=${task.cpus}
 	"""
@@ -904,17 +904,17 @@ process MAP_TO_AMPLICON {
 	cpus 4
 	
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
     each path(amplicon_seq)
 	
 	output:
-	tuple val(sample_id), path("${sample_id}_sorted.bam"), path("${sample_id}_sorted.bam.bai")
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_sorted.bam"), path("${sample_id}_${primer_combo}_sorted.bam.bai")
 	
 	script:
 	"""
 	bbmap.sh ref=${amplicon_seq} in=${reads} out=stdout.sam t=${task.cpus} maxindel=200 | \
-	samtools sort -o ${sample_id}_sorted.bam - && \
-	samtools index -o ${sample_id}_sorted.bam.bai ${sample_id}_sorted.bam
+	samtools sort -o ${sample_id}_${primer_combo}_sorted.bam - && \
+	samtools index -o ${sample_id}_${primer_combo}_sorted.bam.bai ${sample_id}_${primer_combo}_sorted.bam
 	"""
 }
 
@@ -933,11 +933,11 @@ process CLIP_AMPLICONS {
 	cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam), path(index)
+	tuple val(sample_id), val(primer_combo), path(bam), path(index)
     each path(amplicon_bed)
 	
 	output:
-    tuple val(sample_id), path("${sample_id}_clipped.bam")
+    tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_clipped.bam")
 	
 	script:
 	"""
@@ -946,12 +946,10 @@ process CLIP_AMPLICONS {
 	--hard-clip \
 	--both-ends \
 	--clipped \
-	${sample_id}_sorted.bam \
-	-o ${sample_id}_clipped.bam
+	${sample_id}_${primer_combo}_sorted.bam \
+	-o ${sample_id}_${primer_combo}_clipped.bam
 	"""
 }
-
-// process CALL_AMPLICON_VARIANTS {}
 
 process BAM_TO_FASTQ {
 
@@ -968,15 +966,15 @@ process BAM_TO_FASTQ {
 	cpus 4
 	
 	input:
-	tuple val(sample_id), path(bam)
+	tuple val(sample_id), val(primer_combo), path(bam)
 	
 	output:
-	tuple val(sample_id), path("*.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("*.fastq.gz")
 	
 	script:
 	"""
 	reformat.sh in=${bam} out=stdout.fastq t=${task.cpus} | \
-	clumpify.sh in=stdin.fastq out=${sample_id}_amplicon_reads.fastq.gz t=${task.cpus} reorder
+	clumpify.sh in=stdin.fastq out=${sample_id}_${primer_combo}_amplicon_reads.fastq.gz t=${task.cpus} reorder
 	"""
 }
 
@@ -995,10 +993,10 @@ process VALIDATE_SEQS {
 	cpus 4
 	
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 	
 	output:
-	tuple val(sample_id), path("*.fastq.gz")
+	tuple val(sample_id), val(primer_combo), path("*.fastq.gz")
 	
 	script:
 	"""
@@ -1007,7 +1005,7 @@ process VALIDATE_SEQS {
 	--threads ${task.cpus} \
 	--remove-gaps \
 	--validate-seq \
-    -o ${sample_id}_filtered.fastq.gz
+    -o ${sample_id}_${primer_combo}_filtered.fastq.gz
 	"""
 }
 
@@ -1026,15 +1024,15 @@ process FASTQC {
 	cpus 1
 	
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 	
 	output:
-	path "${sample_id}_${params.desired_amplicon}_qc.html", emit: html
+	path "${sample_id}_${primer_combo}_qc.html", emit: html
 	path "${sample_id}/", emit: multiqc_data
 	
 	script:
 	"""
-	fqc -q ${reads} -s . > ${sample_id}_${params.desired_amplicon}_qc.html
+	fqc -q ${reads} -s . > ${sample_id}_${primer_combo}_qc.html
 	mkdir ${sample_id}
 	mv fastqc_data.txt ${sample_id}/fastqc_data.txt
 	"""
@@ -1082,11 +1080,11 @@ process IDENTIFY_HAPLOTYPES {
 	cpus 1
 	
 	input:
-	tuple val(sample_id), path(reads)
+	tuple val(sample_id), val(primer_combo), path(reads)
 	
 	output:
-	tuple val(sample_id), path("${sample_id}_deduped.fasta"), emit: deduped_fasta
-	path "${sample_id}_${params.desired_amplicon}_haplotype_metadata.tsv", emit: metadata
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_deduped.fasta"), emit: deduped_fasta
+	path "${sample_id}_${primer_combo}_haplotype_metadata.tsv", emit: metadata
 
 	script:
 	"""
@@ -1105,7 +1103,7 @@ process IDENTIFY_HAPLOTYPES {
 	--names orig_label,clust_label,clust_index,seq_index_in_clust,clust_abundance,first_seq_label \
 	tmp.tsv | \
 	csvtk filter -t --filter "clust_abundance>=${params.min_reads}" \
-	> ${sample_id}_${params.desired_amplicon}_haplotype_metadata.tsv
+	> ${sample_id}_${primer_combo}_haplotype_metadata.tsv
 
 	rm tmp.tsv
 	"""
@@ -1127,17 +1125,17 @@ process NAME_HAPLOTYPES {
 	cpus 1
 
 	input:
-	tuple val(sample_id), path(fasta) 
+	tuple val(sample_id), val(primer_combo), path(fasta) 
 
 	output:
-	path "${sample_id}_${params.desired_amplicon}_haplotypes.fasta"
+	path "${sample_id}_${primer_combo}_haplotypes.fasta"
 
 	script:
 	"""
 	seqkit replace -p ";" -r " " ${fasta} | \
-	seqkit replace -p "^." -r "${sample_id}_${params.desired_amplicon}_haplotype " \
+	seqkit replace -p "^." -r "${sample_id}_${primer_combo}_haplotype " \
 	| seqkit rename --rename-1st-rec \
-	-o ${sample_id}_${params.desired_amplicon}_haplotypes.fasta
+	-o ${sample_id}_${primer_combo}_haplotypes.fasta
 	"""
 
 }
