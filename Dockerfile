@@ -136,10 +136,9 @@ RUN cd /usr/bin && \
     unlink python3 && \
     ln -s /usr/bin/python3.12 python3
 
-# Install MultiQC and a few other things
+# Install Python Environment
 RUN apt install -y python3.12-distutils
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3
-# RUN python3 -m pip install multiqc
 COPY requirements.txt /opt/
 RUN python3 -m pip install -r /opt/requirements.txt
 

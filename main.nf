@@ -176,7 +176,13 @@ workflow {
         BAM_TO_FASTQ.out
     )
 
-	// FASTQC ()
+	FASTQC (
+		VALIDATE_SEQS.out
+	)
+
+	// MULTIQC (
+	// 	FASTQC.out.collect()
+	// )
 
 	// MULTIQC ()
 
@@ -254,6 +260,7 @@ params.error_correct = params.preprocessing + "/08_error_correct"
 params.qtrim = params.preprocessing + "/09_quality_trim"
 params.clipped = params.preprocessing + "/10_clipped_reads"
 params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
+params.fastqc_results = params.preprocessing + "/12_FastQC_results"
 
 // haplotyping results
 params.haplotyping_results = params.amplicon_results + "/02_haplotyping_results"
@@ -943,6 +950,60 @@ process VALIDATE_SEQS {
 	"""
 }
 
+process FASTQC {
+
+    /*
+    */
+	
+	tag "${sample_id}"
+    label "general"
+	publishDir params.fastqc_results, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	cpus 1
+	
+	input:
+	tuple val(sample_id), path(reads)
+	
+	output:
+	path("${sample_id}_${params.desired_amplicon}_qc.html") 
+	
+	script:
+	"""
+	fqc -q ${reads} > ${sample_id}_${params.desired_amplicon}_qc.html
+	"""
+
+}
+
+process MULTIQC {
+
+    /*
+    */
+	
+	tag "${params.desired_amplicon}"
+    label "multiqc"
+	publishDir params.preprocessing, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	cpus 1
+	
+	input:
+	path fastqc_files
+	
+	output:
+	path("*.html") 
+	
+	script:
+	"""
+	multiqc .
+	"""
+
+}
+
 process IDENTIFY_HAPLOTYPES {
 
 	/*
@@ -1027,7 +1088,7 @@ process MAP_HAPLOTYPE_TO_REF {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 4
+    cpus 2
 	
 	input:
 	path haplotype
