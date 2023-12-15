@@ -172,9 +172,9 @@ workflow {
 
     MAP_TO_AMPLICON (
         QUALITY_TRIM.out
-			.map { name, reads -> tuple( name, file(reads), file(reads).countFastq() ) }
-			.filter { it[2] >= params.min_reads }
-			.map { name, reads, count -> tuple( name, file(reads) ) },
+			.map { name, combo, reads -> tuple( name, combo, file(reads), file(reads).countFastq() ) }
+			.filter { it[3] >= params.min_reads }
+			.map { name, combo, reads, count -> tuple( name, combo, file(reads) ) },
         EXTRACT_REF_AMPLICON.out.seq
     )
 
