@@ -73,14 +73,26 @@ workflow {
 		GET_GENE_BED.out
 	)
 
-    GET_PRIMER_SEQS (
+    SUBSET_BED_FILE (
         RESPLICE_PRIMERS.out
     )
 
+	GET_AMPLICON_COORDS (
+		SUBSET_BED_FILE.out.bed
+	)
+
     EXTRACT_REF_AMPLICON (
 		ch_refseq,
-        GET_PRIMER_SEQS.out.amplicon_coords
+        GET_AMPLICON_COORDS.out
     )
+
+	SPLIT_PRIMER_COMBOS (
+		SUBSET_BED_FILE.out.bed
+	)
+
+	GET_PRIMER_SEQS (
+		GET_PRIMER_SEQS.out.flatten()
+	)
 
 	if ( params.illumina_pe == true ) {
 
@@ -110,7 +122,7 @@ workflow {
 
     FIND_COMPLETE_AMPLICONS (
         TRIM_ADAPTERS.out,
-        GET_PRIMER_SEQS.out.patterns
+        GET_PRIMER_SEQS.out
     )
 
 	if ( params.illumina_pe == true || params.single_short_reads == true ) {
@@ -165,7 +177,7 @@ workflow {
 
     CLIP_AMPLICONS (
         MAP_TO_AMPLICON.out,
-        GET_PRIMER_SEQS.out.bed
+        SUBSET_BED_FILE.out.bed
     )
 
     BAM_TO_FASTQ (
@@ -355,7 +367,7 @@ process CROSS_REF_WITH_GENES {
 
 }
 
-process GET_PRIMER_SEQS {
+process SUBSET_BED_FILE {
 
     /*
     */
@@ -370,34 +382,38 @@ process GET_PRIMER_SEQS {
     path bed_file
 
     output:
-    path "primer_seqs.bed", emit: bed
-    path "primer_seqs.txt", emit: txt
-	path "amplicon_coords.bed", emit: amplicon_coords
-	path "patterns.txt", emit: patterns
+    path "all_primer_combos.bed", emit: bed
 
     script:
     """
+    grep ${params.desired_amplicon} ${params.primer_bed} > all_primer_combos.bed
+    """
 
-	# get the actual primer sequences and make sure the amplicon's reverse primer
-	# is complementary to the reference sequence it's based on
-    grep ${params.desired_amplicon} ${params.primer_bed} > primer_seqs.bed && \
-    bedtools getfasta -fi ${params.reference} -bed primer_seqs.bed > tmp.fasta && \
-	grep -v "^>" tmp.fasta > patterns.txt && \
-	seqkit head -n 1 tmp.fasta -o primer_seqs.fasta && \
-	seqkit range -r -1:-1 tmp.fasta | \
-	seqkit seq --complement --validate-seq --seq-type DNA >> primer_seqs.fasta && \
-	rm tmp.fasta
+}
 
-	# determine the amplicon coordinates
-	cat primer_seqs.bed | \
+process GET_AMPLICON_COORDS {
+
+	/*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+    input:
+    path primer_seqs
+
+    output:
+	path "amplicon_coords.bed"
+
+    script:
+	"""
+	cat ${primer_seqs} | \
 	awk 'NR==1{start=\$2} NR==2{end=\$3} END{print \$1, start, end}' OFS="\t" \
 	> amplicon_coords.bed
-
-	# convert to a text file that can be read by `seqkit amplicon`
-    seqkit fx2tab --no-qual primer_seqs.fasta | \
-	awk '{print \$2}' | paste -sd \$'\t' - - | awk -v amplicon="${params.desired_amplicon}" \
-	'BEGIN {OFS="\t"} {print amplicon, \$0}' | head -n 1 > primer_seqs.txt
-    """
+	"""
 
 }
 
@@ -431,6 +447,55 @@ process EXTRACT_REF_AMPLICON {
     len=`cat ${params.desired_amplicon}.stats | tail -n 1 | awk '{print \$3}'`
     """
 
+}
+
+process SPLIT_PRIMER_COMBOS {
+
+    /*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	input:
+	path all_primer_combos
+
+	output:
+	path "${params.desired_amplicon}*.bed"
+
+	script:
+	"""
+	split_primer_combos.py -i ${all_primer_combos}
+	"""
+
+}
+
+process GET_PRIMER_SEQS {
+
+    /*
+    */
+
+	tag "${params.desired_amplicon}"
+    label "general"
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	input:
+	path bed
+
+	output:
+	tuple val(primer_combo), path("${primer_combo}_patterns.txt")
+
+	script:
+	primer_combo = file(bed.toString()).getSimpleName()
+	"""
+	bedtools getfasta -fi ${params.reference} -bed ${bed} | \
+	grep -v "^>" > ${primer_combo}_patterns.txt
+	"""
 }
 
 process MERGE_PAIRS {
@@ -561,7 +626,7 @@ process FIND_COMPLETE_AMPLICONS {
 
     input:
 	tuple val(sample_id), path(reads)
-    each path(search_patterns)
+    tuple val(primer_combo), path(search_patterns)
     
     output:
     tuple val(sample_id), path("${sample_id}_amplicons.fastq.gz")
