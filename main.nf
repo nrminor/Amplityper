@@ -346,11 +346,9 @@ process CROSS_REF_WITH_GENES {
     script:
 	bed_name = file(primer_bed.toString()).getSimpleName()
     """
-	ref=`csvtk replace -t ${primer_bed} -f 1 -p " " -r "" | cut -f 1 | uniq`
-	unmatched=`csvtk replace -t ${gene_bed} -f 1 -p " " -r "" | cut -f 1 | uniq`
-
-	csvtk replace -t ${gene_bed} -p \$unmatched -r \$ref -o corrected.bed
-
+	ref=`csvtk replace -t ${primer_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
+	unmatched=`csvtk replace -t ${gene_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
+	csvtk replace -t ${gene_bed} -p "\$unmatched" -r "\$ref" -o corrected.bed && \
 	bedtools intersect -a ${primer_bed} -b corrected.bed -wb | \
 	csvtk cut -f 1,2,3,4,5,6,10 -t > ${bed_name}_with_genes.bed
     """
@@ -967,11 +965,13 @@ process FASTQC {
 	
 	output:
 	path "${sample_id}_${params.desired_amplicon}_qc.html", emit: html
-	path "fastqc_data.txt", emit: multiqc_data
+	path "${sample_id}/", emit: multiqc_data
 	
 	script:
 	"""
 	fqc -q ${reads} -s . > ${sample_id}_${params.desired_amplicon}_qc.html
+	mkdir ${sample_id}
+	mv fastqc_data.txt ${sample_id}/fastqc_data.txt
 	"""
 
 }
@@ -998,7 +998,7 @@ process MULTIQC {
 	
 	script:
 	"""
-	multiqc .
+	multiqc ${fastqc_files}
 	"""
 
 }
@@ -1098,8 +1098,8 @@ process MAP_HAPLOTYPE_TO_REF {
 	
 	script:
 	"""
-	hap_name=`seqkit seq --name --only-id ${haplotype}`
-	bbmap.sh int=f ref=${refseq} in=${haplotype} out=stdout.sam maxindel=200 | \
+	hap_name=`seqkit seq --name --only-id ${haplotype}` && \
+	bbmap.sh int=f ref=${refseq} in=`realpath ${haplotype}` out=stdout.sam maxindel=200 | \
 	reformat.sh in=stdin.sam out="\${hap_name}.bam"
 	"""
 
