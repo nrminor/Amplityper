@@ -72,13 +72,11 @@ def main() -> None:
 
     bed_to_split, fwd_suff, rev_suff = parse_command_line_args()
 
-    bed_dfs = (
-        pl.read_csv(bed_to_split, separator="\t", has_header=False)
-        .with_columns(
-            pl.col("column_5").str.replace(fwd_suff, "").str.replace(rev_suff, "")
-        )
-        .partition_by("column_5")
-    )
+    bed_df = pl.read_csv(bed_to_split, separator="\t", has_header=False)
+
+    bed_dfs = bed_df.with_columns(
+        pl.col("column_5").str.replace(fwd_suff, "").str.replace(rev_suff, "")
+    ).partition_by("column_5")
 
     for df in bed_dfs:
         splicing = df.select("column_5").unique().item()

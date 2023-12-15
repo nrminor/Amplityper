@@ -90,7 +90,7 @@ workflow {
 		SUBSET_BED_FILE.out.bed
 	)
 
-	println "The workflow found ${SPLIT_PRIMER_COMBOS.out.count().view()} possible combinations of primers:"
+	SPLIT_PRIMER_COMBOS.out.count().view()
 	
 
 	GET_PRIMER_SEQS (
@@ -389,7 +389,7 @@ process SUBSET_BED_FILE {
 
     script:
     """
-    grep ${params.desired_amplicon} ${params.primer_bed} > all_primer_combos.bed
+    grep ${params.desired_amplicon} ${bed_file} > all_primer_combos.bed
     """
 
 }
