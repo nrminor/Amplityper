@@ -635,7 +635,7 @@ process FIND_COMPLETE_AMPLICONS {
     tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_amplicons.fastq.gz")
 
     script:
-	primer_combo = file(bed.toString()).getSimpleName().replace("_patterns", "")
+	primer_combo = file(search_patterns.toString()).getSimpleName().replace("_patterns", "")
     """
 	cat ${reads} | \
     seqkit grep \
