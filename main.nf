@@ -91,7 +91,7 @@ workflow {
 	)
 
 	GET_PRIMER_SEQS (
-		GET_PRIMER_SEQS.out.flatten()
+		SPLIT_PRIMER_COMBOS.out.flatten()
 	)
 
 	if ( params.illumina_pe == true ) {
