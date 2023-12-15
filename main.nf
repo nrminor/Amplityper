@@ -180,11 +180,9 @@ workflow {
 		VALIDATE_SEQS.out
 	)
 
-	// MULTIQC (
-	// 	FASTQC.out.collect()
-	// )
-
-	// MULTIQC ()
+	MULTIQC (
+		FASTQC.out.multiqc_data.collect()
+	)
 
 	IDENTIFY_HAPLOTYPES (
 		VALIDATE_SEQS.out
@@ -505,7 +503,7 @@ process FIND_ADAPTER_SEQS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 2
 	
 	input:
 	tuple val(sample_id), path(reads)
@@ -968,11 +966,12 @@ process FASTQC {
 	tuple val(sample_id), path(reads)
 	
 	output:
-	path("${sample_id}_${params.desired_amplicon}_qc.html") 
+	path "${sample_id}_${params.desired_amplicon}_qc.html", emit: html
+	path "fastqc_data.txt", emit: multiqc_data
 	
 	script:
 	"""
-	fqc -q ${reads} > ${sample_id}_${params.desired_amplicon}_qc.html
+	fqc -q ${reads} -s . > ${sample_id}_${params.desired_amplicon}_qc.html
 	"""
 
 }
@@ -1118,7 +1117,7 @@ process CALL_HAPLOTYPE_VARIANTS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 4
+    cpus 2
 	
 	input:
 	tuple val(name), path(bam)
@@ -1147,7 +1146,7 @@ process RUN_SNPEFF {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 4
+    cpus 1
 	
 	input:
 	tuple val(name), path(vcf), val(sample_id)
@@ -1176,7 +1175,7 @@ process GENERATE_TIDY_VCF {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-    cpus 4
+    cpus 1
 	
 	input:
 	tuple val(name), path(vcf), val(sample_id)
