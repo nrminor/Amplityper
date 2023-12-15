@@ -77,15 +77,6 @@ workflow {
         RESPLICE_PRIMERS.out
     )
 
-	GET_AMPLICON_COORDS (
-		SUBSET_BED_FILE.out.bed
-	)
-
-    EXTRACT_REF_AMPLICON (
-		ch_refseq,
-        GET_AMPLICON_COORDS.out
-    )
-
 	SPLIT_PRIMER_COMBOS (
 		SUBSET_BED_FILE.out.bed
 	)
@@ -170,25 +161,11 @@ workflow {
 
 	}
 
-    MAP_TO_AMPLICON (
+    VALIDATE_SEQS (
         QUALITY_TRIM.out
 			.map { name, combo, reads -> tuple( name, combo, file(reads), file(reads).countFastq() ) }
 			.filter { it[3] >= params.min_reads }
-			.map { name, combo, reads, count -> tuple( name, combo, file(reads) ) },
-        EXTRACT_REF_AMPLICON.out.seq
-    )
-
-    CLIP_AMPLICONS (
-        MAP_TO_AMPLICON.out,
-        SUBSET_BED_FILE.out.bed
-    )
-
-    BAM_TO_FASTQ (
-        CLIP_AMPLICONS.out
-    )
-
-    VALIDATE_SEQS (
-        BAM_TO_FASTQ.out
+			.map { name, combo, reads, count -> tuple( name, combo, file(reads) ) }
     )
 
 	FASTQC (
@@ -390,64 +367,6 @@ process SUBSET_BED_FILE {
     script:
     """
     grep ${params.desired_amplicon} ${bed_file} > all_primer_combos.bed
-    """
-
-}
-
-process GET_AMPLICON_COORDS {
-
-	/*
-    */
-
-	tag "${params.desired_amplicon}"
-    label "general"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    input:
-    path primer_seqs
-
-    output:
-	path "amplicon_coords.bed"
-
-    script:
-	"""
-	cat ${primer_seqs} | \
-	awk 'NR==1{start=\$2} NR==2{end=\$3} END{print \$1, start, end}' OFS="\t" \
-	> amplicon_coords.bed
-	"""
-
-}
-
-process EXTRACT_REF_AMPLICON {
-
-    /* */
-
-	tag "${params.desired_amplicon}"
-    label "general"
-	publishDir params.amplicon_results, mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-    input:
-	path refseq
-    path amplicon_coords
-
-    output:
-    path "${params.desired_amplicon}.fasta", emit: seq
-    env len, emit: length
-
-    script:
-    """
-	cat ${refseq} | \
-    seqkit subseq \
-	--bed ${amplicon_coords} \
-    -o ${params.desired_amplicon}.fasta && \
-    seqkit fx2tab --no-qual --length ${params.desired_amplicon}.fasta \
-	-o ${params.desired_amplicon}.stats && \
-    len=`cat ${params.desired_amplicon}.stats | tail -n 1 | awk '{print \$3}'`
     """
 
 }
@@ -894,94 +813,6 @@ process QUALITY_TRIM {
 
 }
 
-process MAP_TO_AMPLICON {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "general"
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), val(primer_combo), path(reads)
-    each path(amplicon_seq)
-	
-	output:
-	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_sorted.bam"), path("${sample_id}_${primer_combo}_sorted.bam.bai")
-	
-	script:
-	"""
-	bbmap.sh ref=${amplicon_seq} in=${reads} out=stdout.sam t=${task.cpus} maxindel=200 | \
-	samtools sort -o ${sample_id}_${primer_combo}_sorted.bam - && \
-	samtools index -o ${sample_id}_${primer_combo}_sorted.bam.bai ${sample_id}_${primer_combo}_sorted.bam
-	"""
-}
-
-process CLIP_AMPLICONS {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "general"
-	publishDir params.clipped, mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), val(primer_combo), path(bam), path(index)
-    each path(amplicon_bed)
-	
-	output:
-    tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_clipped.bam")
-	
-	script:
-	"""
-	samtools ampliconclip \
-	-b ${amplicon_bed} \
-	--hard-clip \
-	--both-ends \
-	--clipped \
-	${sample_id}_${primer_combo}_sorted.bam \
-	-o ${sample_id}_${primer_combo}_clipped.bam
-	"""
-}
-
-process BAM_TO_FASTQ {
-
-    /*
-    */
-	
-	tag "${sample_id}"
-    label "general"
-	publishDir params.clipped, mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-	cpus 4
-	
-	input:
-	tuple val(sample_id), val(primer_combo), path(bam)
-	
-	output:
-	tuple val(sample_id), val(primer_combo), path("*.fastq.gz")
-	
-	script:
-	"""
-	reformat.sh in=${bam} out=stdout.fastq t=${task.cpus} | \
-	clumpify.sh in=stdin.fastq out=${sample_id}_${primer_combo}_amplicon_reads.fastq.gz t=${task.cpus} reorder
-	"""
-}
-
 process VALIDATE_SEQS {
 
     /*
@@ -1032,13 +863,13 @@ process FASTQC {
 	
 	output:
 	path "${sample_id}_${primer_combo}_qc.html", emit: html
-	path "${sample_id}/", emit: multiqc_data
+	path "${sample_id}_${primer_combo}/", emit: multiqc_data
 	
 	script:
 	"""
 	fqc -q ${reads} -s . > ${sample_id}_${primer_combo}_qc.html
-	mkdir ${sample_id}
-	mv fastqc_data.txt ${sample_id}/fastqc_data.txt
+	mkdir ${sample_id}_${primer_combo}
+	mv fastqc_data.txt ${sample_id}_${primer_combo}/fastqc_data.txt
 	"""
 
 }
