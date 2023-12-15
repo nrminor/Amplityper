@@ -491,7 +491,7 @@ process GET_PRIMER_SEQS {
 	path bed
 
 	output:
-	tuple val(primer_combo), path("${primer_combo}_patterns.txt")
+	path "${primer_combo}_patterns.txt"
 
 	script:
 	primer_combo = file(bed.toString()).getSimpleName()
@@ -629,12 +629,13 @@ process FIND_COMPLETE_AMPLICONS {
 
     input:
 	tuple val(sample_id), path(reads)
-    tuple val(primer_combo), path(search_patterns)
+    each path(search_patterns)
     
     output:
     tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_amplicons.fastq.gz")
 
     script:
+	primer_combo = file(bed.toString()).getSimpleName().replace("_patterns", "")
     """
 	cat ${reads} | \
     seqkit grep \
