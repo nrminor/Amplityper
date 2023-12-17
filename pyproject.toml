@@ -7,7 +7,7 @@ license = "MIT"
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.9"
 result = "^0.14.0"
 polars = "^0.19.17"
 strictyaml = "^1.7.3"
