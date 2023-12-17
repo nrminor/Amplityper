@@ -6,7 +6,7 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
-# construct amplicon file 
+# construct amplicon file
 cut -f 4 $1 | sed 's/_LEFT//g' | sed 's/_RIGHT//g' | sort -u | uniq -u  > amplicons.txt
 
 # check if the script has been run before

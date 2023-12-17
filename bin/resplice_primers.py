@@ -295,16 +295,16 @@ def main() -> None:
             .str.replace_all("-4", "")
             .alias("Amplicon")
         )
-                        .select(
-                            "Ref",
-                            "Start Position",
-                            "Stop Position",
-                            "ORIG_NAME",
-                            "NAME",
-                            "INDEX",
-                            "SENSE",
-                            "Amplicon",
-                        )
+        .select(
+            "Ref",
+            "Start Position",
+            "Stop Position",
+            "ORIG_NAME",
+            "NAME",
+            "INDEX",
+            "SENSE",
+            "Amplicon",
+        )
         .with_columns(pl.col("NAME").is_duplicated().alias("duped"))
         .partition_by("Amplicon")
     )

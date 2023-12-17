@@ -22,7 +22,7 @@ workflow {
 		( params.illumina_pe == false && params.single_short_reads == true ) ||
 		( params.illumina_pe == true && params.single_short_reads == false )
 	) : "Please make sure that only one out of the three parameters long_reads, illumina_pe,\nand single_short_reads is set to true to avoid confusing the workflow."
-	
+
 	// input channels
 	if ( params.long_reads == true ) {
 
@@ -42,22 +42,22 @@ workflow {
 			.fromFilePairs( "${params.fastq_dir}/*{_R1,_R2}_001.fastq.gz", flat: true )
 
 	}
-	
+
     ch_primer_bed = Channel
         .fromPath( params.primer_bed )
 
 	ch_refseq = Channel
 		.fromPath( params.reference )
-	
+
 	ch_refgff = Channel
 		.fromPath( params.gff )
-	
+
 	ch_sc2_genes = Channel
 		.fromPath( params.sc2_genes )
-	
+
 	ch_r_config = Channel
 		.fromPath( params.gene_to_bed_config )
-	
+
 	// Workflow steps
 	RESPLICE_PRIMERS (
 		ch_primer_bed
@@ -82,7 +82,7 @@ workflow {
 	)
 
 	SPLIT_PRIMER_COMBOS.out.count().view()
-	
+
 
 	GET_PRIMER_SEQS (
 		SPLIT_PRIMER_COMBOS.out.flatten()
@@ -215,7 +215,7 @@ workflow {
 	// 	GENERATE_IVAR_TABLE.out.collect(),
 	// 	CROSS_REF_WITH_GENES.out
 	// )
-	
+
 }
 // --------------------------------------------------------------- //
 
@@ -265,7 +265,7 @@ params.ivar_tables = params.haplotyping_results + "/04_ivar_tables"
 
 
 
-// PROCESS SPECIFICATION 
+// PROCESS SPECIFICATION
 // --------------------------------------------------------------- //
 
 process RESPLICE_PRIMERS {
@@ -423,7 +423,7 @@ process GET_PRIMER_SEQS {
 process MERGE_PAIRS {
 
     /* */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir params.merged_reads, mode: params.pubMode, overwrite: true
@@ -456,7 +456,7 @@ process CLUMP_READS {
 
     /*
     */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir params.clumped_reads, mode: params.pubMode, overwrite: true
@@ -465,13 +465,13 @@ process CLUMP_READS {
 	maxRetries 2
 
 	cpus 4
-	
+
 	input:
 	tuple val(sample_id), path(reads)
-	
+
 	output:
     tuple val(sample_id), path("${sample_id}_clumped.fastq.gz")
-	
+
 	script:
 	"""
 	clumpify.sh in=${reads} out=${sample_id}_clumped.fastq.gz t=${task.cpus} reorder
@@ -479,9 +479,9 @@ process CLUMP_READS {
 }
 
 process FIND_ADAPTER_SEQS {
-	
+
 	/* */
-	
+
 	tag "${sample_id}"
     label "general"
 
@@ -489,13 +489,13 @@ process FIND_ADAPTER_SEQS {
 	maxRetries 2
 
 	cpus 2
-	
+
 	input:
 	tuple val(sample_id), path(reads)
-	
+
 	output:
 	tuple val(sample_id), path(reads), path("${sample_id}_adapters.fasta")
-	
+
 	script:
 	"""
     bbmerge.sh in=`realpath ${reads}` outa="${sample_id}_adapters.fasta" # ow qin=33
@@ -504,9 +504,9 @@ process FIND_ADAPTER_SEQS {
 }
 
 process TRIM_ADAPTERS {
-	
+
 	/* */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir params.trim_adapters, mode: params.pubMode, overwrite: true
@@ -515,7 +515,7 @@ process TRIM_ADAPTERS {
 	maxRetries 2
 
 	cpus 2
-	
+
 	input:
 	tuple val(sample_id), path(reads), path(adapters)
 
@@ -549,7 +549,7 @@ process FIND_COMPLETE_AMPLICONS {
     input:
 	tuple val(sample_id), path(reads)
     each path(search_patterns)
-    
+
     output:
     tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_amplicons.fastq.gz")
 
@@ -574,7 +574,7 @@ process FIND_COMPLETE_AMPLICONS {
 
 process REMOVE_OPTICAL_DUPLICATES {
 
-	/* 
+	/*
 	This process removes optical duplicates from the Illumina flow cell.
 	*/
 
@@ -614,7 +614,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 
 process REMOVE_LOW_QUALITY_REGIONS {
 
-	/* 
+	/*
 	Low quality regions of each read are removed in this process.
 	*/
 
@@ -653,7 +653,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 
 process REMOVE_ARTIFACTS {
 
-	/* 
+	/*
 	Here we remove various contantimants that may have ended up in the reads,
 	such as PhiX sequences that are often used as a sequencing control.
 	*/
@@ -686,7 +686,7 @@ process REMOVE_ARTIFACTS {
 
 process ERROR_CORRECT_PHASE_ONE {
 
-	/* 
+	/*
 	Bbmap recommends three phases of read error correction, the first of which
 	goes through BBMerge.
 	*/
@@ -720,7 +720,7 @@ process ERROR_CORRECT_PHASE_ONE {
 
 process ERROR_CORRECT_PHASE_TWO {
 
-	/* 
+	/*
 	The second phase of error correction goes through clumpify.sh
 	*/
 
@@ -750,7 +750,7 @@ process ERROR_CORRECT_PHASE_TWO {
 
 process ERROR_CORRECT_PHASE_THREE {
 
-	/* 
+	/*
 	The third phase of error correction uses tadpole.sh.
 	*/
 
@@ -782,9 +782,9 @@ process ERROR_CORRECT_PHASE_THREE {
 
 process QUALITY_TRIM {
 
-	/* 
-	Here we quality trim reads from both ends to a minimum Phred quality of 10, 
-	and enforce a minimum read length of 70 bases. 
+	/*
+	Here we quality trim reads from both ends to a minimum Phred quality of 10,
+	and enforce a minimum read length of 70 bases.
 	*/
 
 	tag "${sample_id}"
@@ -817,7 +817,7 @@ process VALIDATE_SEQS {
 
     /*
     */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir params.complete_amplicon, mode: 'copy', overwrite: true
@@ -826,13 +826,13 @@ process VALIDATE_SEQS {
 	maxRetries 2
 
 	cpus 1
-	
+
 	input:
 	tuple val(sample_id), val(primer_combo), path(reads)
-	
+
 	output:
 	tuple val(sample_id), val(primer_combo), path("*.fastq.gz")
-	
+
 	script:
 	"""
 	cat ${reads} | \
@@ -848,7 +848,7 @@ process FASTQC {
 
     /*
     */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir params.fastqc_results, mode: 'copy', overwrite: true
@@ -857,14 +857,14 @@ process FASTQC {
 	maxRetries 2
 
 	cpus 1
-	
+
 	input:
 	tuple val(sample_id), val(primer_combo), path(reads)
-	
+
 	output:
 	path "${sample_id}_${primer_combo}_qc.html", emit: html
 	path "${sample_id}_${primer_combo}/", emit: multiqc_data
-	
+
 	script:
 	"""
 	fqc -q ${reads} -s . > ${sample_id}_${primer_combo}_qc.html
@@ -878,7 +878,7 @@ process MULTIQC {
 
     /*
     */
-	
+
 	tag "${params.desired_amplicon}"
     label "multiqc"
 	publishDir params.preprocessing, mode: 'copy', overwrite: true
@@ -887,13 +887,13 @@ process MULTIQC {
 	maxRetries 2
 
 	cpus 1
-	
+
 	input:
 	path fastqc_files
-	
+
 	output:
-	path("*.html") 
-	
+	path("*.html")
+
 	script:
 	"""
 	multiqc ${fastqc_files}
@@ -905,7 +905,7 @@ process IDENTIFY_HAPLOTYPES {
 
 	/*
     */
-	
+
 	tag "${sample_id}"
     label "general"
 
@@ -913,10 +913,10 @@ process IDENTIFY_HAPLOTYPES {
 	maxRetries 2
 
 	cpus 1
-	
+
 	input:
 	tuple val(sample_id), val(primer_combo), path(reads)
-	
+
 	output:
 	tuple val(sample_id), val(primer_combo), path("${sample_id}_deduped.fasta"), emit: deduped_fasta
 	path "${sample_id}_${primer_combo}_haplotype_metadata.tsv", emit: metadata
@@ -949,7 +949,7 @@ process NAME_HAPLOTYPES {
 
 	/*
     */
-	
+
 	tag "${sample_id}"
     label "general"
 	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
@@ -960,7 +960,7 @@ process NAME_HAPLOTYPES {
 	cpus 1
 
 	input:
-	tuple val(sample_id), val(primer_combo), path(fasta) 
+	tuple val(sample_id), val(primer_combo), path(fasta)
 
 	output:
 	path "${sample_id}_${primer_combo}_haplotypes.fasta"
@@ -979,21 +979,21 @@ process MAP_HAPLOTYPE_TO_REF {
 
     /*
     */
-	
+
     label "general"
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
     cpus 2
-	
+
 	input:
 	path haplotype
 	each path(refseq)
-	
+
 	output:
 	tuple env(hap_name), path("*.bam")
-	
+
 	script:
 	"""
 	hap_name=`seqkit seq --name --only-id ${haplotype}` && \
@@ -1007,7 +1007,7 @@ process CALL_HAPLOTYPE_VARIANTS {
 
     /*
     */
-	
+
 	tag "${name}"
     label "general"
 	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
@@ -1016,14 +1016,14 @@ process CALL_HAPLOTYPE_VARIANTS {
 	maxRetries 2
 
     cpus 2
-	
+
 	input:
 	tuple val(name), path(bam)
 	each path(refseq)
-	
+
 	output:
 	tuple val(name), path("${name}.vcf"), val(sample_id)
-	
+
 	script:
 	sample_id = name.toString().split("_")[0]
 	"""
@@ -1036,7 +1036,7 @@ process RUN_SNPEFF {
 
     /*
     */
-	
+
 	tag "${name}"
     label "general"
 	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
@@ -1045,14 +1045,14 @@ process RUN_SNPEFF {
 	maxRetries 2
 
     cpus 1
-	
+
 	input:
 	tuple val(name), path(vcf), val(sample_id)
 	each path(refseq)
-	
+
 	output:
 	tuple val(name), path("${name}_annotated.vcf"), val(sample_id)
-	
+
 	script:
 	"""
 	REF=`seqkit seq --name --only-id ${refseq}` && \
@@ -1065,7 +1065,7 @@ process GENERATE_TIDY_VCF {
 
     /*
     */
-	
+
 	tag "${name}"
     label "general"
 	publishDir "${params.variants}/${sample_id}", mode: 'copy', overwrite: true
@@ -1074,13 +1074,13 @@ process GENERATE_TIDY_VCF {
 	maxRetries 2
 
     cpus 1
-	
+
 	input:
 	tuple val(name), path(vcf), val(sample_id)
-	
+
 	output:
 	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id)
-	
+
 	script:
 	"""
 	tidyvcf -i ${name}_annotated.vcf -s -o ${name}_annotated.tvcf.tsv
@@ -1092,7 +1092,7 @@ process GENERATE_IVAR_TABLE {
 
 	/* */
 
-	
+
 	tag "${name}"
     label "iVar"
 	publishDir "${params.ivar_tables}/${sample_id}", mode: 'copy', overwrite: true
@@ -1118,21 +1118,21 @@ process GENERATE_IVAR_TABLE {
 }
 
 process GENERATE_FINAL_REPORT {
-	
+
 	/* */
-	
+
 	tag "${sample_id}"
 	publishDir params.amplicon_results, mode: 'copy'
-	
+
 	input:
 	path tvcf_files
 	path ivar_tables
 	each path(gene_bed)
-	
+
 	output:
 	path "final_report.xlsx", emit: report_xlsx
 	path "*.arrow", emit: arrow_data
-	
+
 	script:
 	"""
 	read_zap_report.py \

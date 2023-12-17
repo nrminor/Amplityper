@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "read-zap-report"
+name = "read-zap"
 version = "0.1.0"
-description = "Python module for reporting results from the READ-ZAP viral amplicon phasing pipeline."
+description = "Read Extraction And De novo assembly for Zero-error Amplicon Phasing."
 authors = ["Nicholas Minor <nrminor@wisc.edu>"]
 license = "MIT"
 readme = "README.md"
@@ -17,9 +17,6 @@ icecream = "^2.1.3"
 tqdm = "^4.66.1"
 xlsx2csv = "^0.8.1"
 
-[tool.poetry.scripts]
-"rz_report" = "read_zap_report:main"
-
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.6"
@@ -28,6 +25,10 @@ pdoc = "^14.1.0"
 mypy = "^1.7.1"
 ipykernel = "^6.27.1"
 quarto = "^0.1.0"
+pre-commit = "^3.6.0"
+tox = "^4.11.4"
+pytest = "^7.4.3"
+codecarbon = "^2.3.2"
 
 [build-system]
 requires = ["poetry-core"]
