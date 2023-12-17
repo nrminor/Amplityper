@@ -69,12 +69,12 @@ workflow {
 	)
 
 	CROSS_REF_WITH_GENES (
-		ch_primer_bed,
+		RESPLICE_PRIMERS.out,
 		GET_GENE_BED.out
 	)
 
     SUBSET_BED_FILE (
-        RESPLICE_PRIMERS.out
+        CROSS_REF_WITH_GENES.out
     )
 
 	SPLIT_PRIMER_COMBOS (
@@ -340,9 +340,9 @@ process CROSS_REF_WITH_GENES {
     """
 	ref=`csvtk replace -t ${primer_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
 	unmatched=`csvtk replace -t ${gene_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
-	csvtk replace -t ${gene_bed} -p "\$unmatched" -r "\$ref" -o corrected.bed && \
+	csvtk replace -H -t ${gene_bed} -p "\$unmatched" -r "\$ref" -o corrected.bed && \
 	bedtools intersect -a ${primer_bed} -b corrected.bed -wb | \
-	csvtk cut -f 1,2,3,4,5,6,10 -t > ${bed_name}_with_genes.bed
+	csvtk cut -f 1,2,3,4,5,6,11 -t > ${bed_name}_with_genes.bed
     """
 
 }
@@ -514,7 +514,7 @@ process TRIM_ADAPTERS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 2
 	
 	input:
 	tuple val(sample_id), path(reads), path(adapters)
@@ -585,7 +585,7 @@ process REMOVE_OPTICAL_DUPLICATES {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -625,7 +625,7 @@ process REMOVE_LOW_QUALITY_REGIONS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -665,7 +665,7 @@ process REMOVE_ARTIFACTS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -698,7 +698,7 @@ process ERROR_CORRECT_PHASE_ONE {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -728,7 +728,7 @@ process ERROR_CORRECT_PHASE_TWO {
     label "general"
 	publishDir params.error_correct, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -761,7 +761,7 @@ process ERROR_CORRECT_PHASE_THREE {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -794,7 +794,7 @@ process QUALITY_TRIM {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	memory 3.GB
 
 	input:
@@ -825,7 +825,7 @@ process VALIDATE_SEQS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus 1
 	
 	input:
 	tuple val(sample_id), val(primer_combo), path(reads)
