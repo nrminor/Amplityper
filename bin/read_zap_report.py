@@ -345,7 +345,7 @@ def _try_parse_identifier(defline: str, amplicon: str) -> Optional[str]:
     and amplicons.
     """
 
-    items = defline.split("_")
+    items = defline.split(" ")[-1].split("=")[-1]
     sample_id = items[1]
     (contig,) = [item for item in items if "contig" in item]
 
@@ -724,13 +724,13 @@ def construct_long_df(
         .with_columns(
             (
                 # pylint: disable-next=singleton-comparison
-                (pl.col("ALT_AA") == pl.col("REF_AA")) & (pl.col("Noncoding") == False)
+                (pl.col("ALT_AA") == pl.col("REF_AA")) & (pl.col("Noncoding") == False)  # noqa: E712
             ).alias("Synonymous")
         )
         .with_columns(
             (
                 # pylint: disable-next=singleton-comparison
-                (pl.col("ALT_AA") != pl.col("REF_AA")) & (pl.col("Noncoding") == False)
+                (pl.col("ALT_AA") != pl.col("REF_AA")) & (pl.col("Noncoding") == False)  # noqa: E712
             ).alias("Nonsynonymous")
         )
         .drop(["REF_AA", "ALT_AA", "CODON"])

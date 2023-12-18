@@ -9,15 +9,20 @@ files:
   md5: 07ffd2b57419a20e0d5c55e856f65bea
   size: 14703
   url: null
-- path: resources/MN908947.3.fasta
-  tracked: false
-  md5: 16d9ba276f94cdb7ced14f69bba18324
-  size: 30343
-  url: null
 - path: resources/sars-cov-2_genes.fasta
   tracked: false
   md5: 9b184dd77e4c0a20850b324005f5a547
   size: 31023
+  url: null
+- path: resources/MN908947.3.fasta.fai
+  tracked: false
+  md5: b1610fb7bafa9d8395118ee4d5250460
+  size: 26
+  url: null
+- path: resources/MN908947.3.fasta
+  tracked: false
+  md5: 16d9ba276f94cdb7ced14f69bba18324
+  size: 30343
   url: null
 remotes: {}
 metadata:

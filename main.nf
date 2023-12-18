@@ -254,10 +254,9 @@ params.fastqc_results = params.preprocessing + "/12_FastQC_results"
 
 // haplotyping results
 params.haplotyping_results = params.amplicon_results + "/02_haplotyping_results"
-params.haplotypes = params.haplotyping_results + "/02_haplotypes"
-params.aligned_haplotypes = params.haplotyping_results + "/02_aligned_haplotypes"
-params.variants = params.haplotyping_results + "/03_contig_VCFs"
-params.ivar_tables = params.haplotyping_results + "/04_ivar_tables"
+params.haplotypes = params.haplotyping_results + "/01_haplotypes"
+params.variants = params.haplotyping_results + "/02_contig_VCFs"
+params.ivar_tables = params.haplotyping_results + "/03_ivar_tables"
 
 
 // --------------------------------------------------------------- //

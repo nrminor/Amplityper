@@ -1,3 +1,35 @@
-ivar_pattern: 02_assembly_results/05_ivar_tables/*/*.tsv
-fasta_pattern: 02_assembly_results/03_contigs/**/*_contig*_consensus.fa
-tidyvcf_pattern: 02_assembly_results/04_contig_VCFs/**/*.tvcf.tsv
+### CONFIGURATION SETTINGS TO BE USED WHEN REPORTING RESULTS ###
+### -------------------------------------------------------- ###
+
+# A file path "pattern" that contains wildcards such that when the
+# wildcards are expanded, the pattern will allow retrieval of all
+# available iVar variant tables.
+ivar_pattern: 02_haplotyping_results/03_ivar_tables/*/*.tsv
+
+# A file path "pattern" that contains wildcards such that when the
+# wildcards are expanded, the pattern will allow retrieval of all
+# available haplotype sequences in FASTA format.
+fasta_pattern: 02_haplotyping_results/01_haplotypes/**/*_haplotypes.fasta
+
+# A file path "pattern" that contains wildcards such that when the
+# wildcards are expanded, the pattern will allow retrieval of all
+# available "tidy" files.
+tidyvcf_pattern: 02_haplotyping_results/02_contig_VCFs/**/*.tvcf.tsv
+
+# FASTA header line parsing can be tedious and error prone. Here,
+# we try to make it a little less so. Say you have a defline that
+# looks like this:
+#
+# >SRR23121149_QIAseq_167_splice1_haplotype_1 size=41
+#
+# We use two sets of splits and indices for the resulting lists
+# to retrieve the informatiom we want--in this case, what we want
+# is the integer "41" at the end, as this number represents to
+# sequencing read coverage for that haplotype. To retrieve it,
+# we first split by spaces and keep the last item ("size=41",
+# index -1), and then split that item by "=" and keep the last
+# item from that split, 41.
+split1_char: " "
+split1_index: -1
+split2_char: "="
+split2_index: -1
