@@ -32,7 +32,7 @@ from typing import Dict, List, Optional, Tuple, cast
 import polars as pl
 from icecream import ic  # type: ignore
 from result import Err, Ok, Result
-from strictyaml import Map, Str, YAMLError, load  # type: ignore
+from strictyaml import Int, Map, Str, YAMLError, load  # type: ignore
 from tqdm import tqdm  # type: ignore
 
 
@@ -47,6 +47,10 @@ class ConfigParams:
     ivar_pattern: Path
     fasta_pattern: Path
     tidyvcf_pattern: Path
+    split1_char: str
+    split1_index: int
+    split2_char: str
+    split2_index: int
 
 
 def parse_command_line_args() -> Result[argparse.Namespace, str]:
@@ -113,6 +117,10 @@ def parse_configurations(config_path: Path) -> Result[ConfigParams, str]:
             "ivar_pattern": Str(),
             "fasta_pattern": Str(),
             "tidyvcf_pattern": Str(),
+            "split1_char": Str(),
+            "split1_index": Int(),
+            "split2_char": Str(),
+            "split2_index": Int(),
         }
     )
 
@@ -130,6 +138,10 @@ def parse_configurations(config_path: Path) -> Result[ConfigParams, str]:
         ivar_pattern=cast(Path, config_dict.get("ivar_pattern")),
         fasta_pattern=cast(Path, config_dict.get("fasta_pattern")),
         tidyvcf_pattern=cast(Path, config_dict.get("tidyvcf_pattern")),
+        split1_char=str(config_dict.get("split1_char")),
+        split1_index=cast(int, config_dict.get("split1_index")),
+        split2_char=str(config_dict.get("split1_char")),
+        split2_index=cast(int, config_dict.get("split2_index")),
     )
 
     ic("Configurations parsed.")
