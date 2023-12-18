@@ -58,6 +58,9 @@ workflow {
 	ch_r_config = Channel
 		.fromPath( params.gene_to_bed_config )
 
+	ch_reporting_yaml = Channel
+		.fromPath( params.reporting_config )
+
 	// Workflow steps
 	RESPLICE_PRIMERS (
 		ch_primer_bed
@@ -210,11 +213,13 @@ workflow {
 		ch_refgff
 	)
 
-	// GENERATE_FINAL_REPORT (
-	// 	GENERATE_TIDY_VCF.out.collect(),
-	// 	GENERATE_IVAR_TABLE.out.collect(),
-	// 	CROSS_REF_WITH_GENES.out
-	// )
+	GENERATE_FINAL_REPORT (
+		GENERATE_TIDY_VCF.out.collect(),
+		GENERATE_IVAR_TABLE.out.collect(),
+		NAME_HAPLOTYPES.out.collect(),
+		CROSS_REF_WITH_GENES.out,
+		ch_reporting_yaml
+	)
 
 }
 // --------------------------------------------------------------- //
@@ -968,7 +973,7 @@ process NAME_HAPLOTYPES {
 	"""
 	seqkit replace -p ";" -r " " ${fasta} | \
 	seqkit replace -p "^." -r "${sample_id}_${primer_combo}_haplotype " \
-	| seqkit rename --rename-1st-rec \
+	| seqkit rename --rename-1st-rec --separator "" \
 	-o ${sample_id}_${primer_combo}_haplotypes.fasta
 	"""
 
@@ -1078,7 +1083,7 @@ process GENERATE_TIDY_VCF {
 	tuple val(name), path(vcf), val(sample_id)
 
 	output:
-	tuple val(name), path("${name}_annotated.tvcf.tsv"), val(sample_id)
+	path "${name}_annotated.tvcf.tsv"
 
 	script:
 	"""
@@ -1111,7 +1116,7 @@ process GENERATE_IVAR_TABLE {
 	sample_id = name.toString().split("_")[0]
 	"""
 	samtools mpileup -aa -A -d 0 -B -Q 0 --reference ${refseq} ${bam} | \
-	ivar variants -p ${name} -t 0 -r ${refseq} -g ${refgff}
+	ivar variants -p ${name}_ivar -t 0 -r ${refseq} -g ${refgff}
 	"""
 
 }
@@ -1120,13 +1125,15 @@ process GENERATE_FINAL_REPORT {
 
 	/* */
 
-	tag "${sample_id}"
-	publishDir params.amplicon_results, mode: 'copy'
+	tag "${params.desired_amplicon}"
+	publishDir params.amplicon_results, mode: 'copy', overwrite: true
 
 	input:
 	path tvcf_files
 	path ivar_tables
+	path contig_fastas
 	each path(gene_bed)
+	each path(config)
 
 	output:
 	path "final_report.xlsx", emit: report_xlsx
@@ -1135,9 +1142,9 @@ process GENERATE_FINAL_REPORT {
 	script:
 	"""
 	read_zap_report.py \
-	--results_dir ${params.amplicon_results} \
-	--gene_bed ${} \
-	--config ${params.reporting_config}
+	--results_dir . \
+	--gene_bed ${gene_bed} \
+	--config ${config}
 	"""
 
 }

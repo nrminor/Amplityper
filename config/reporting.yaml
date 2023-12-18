@@ -4,17 +4,17 @@
 # A file path "pattern" that contains wildcards such that when the
 # wildcards are expanded, the pattern will allow retrieval of all
 # available iVar variant tables.
-ivar_pattern: 02_haplotyping_results/03_ivar_tables/*/*.tsv
+ivar_pattern: "*_ivar_*.tsv"
 
 # A file path "pattern" that contains wildcards such that when the
 # wildcards are expanded, the pattern will allow retrieval of all
 # available haplotype sequences in FASTA format.
-fasta_pattern: 02_haplotyping_results/01_haplotypes/**/*_haplotypes.fasta
+fasta_pattern: "*_haplotypes.fasta"
 
 # A file path "pattern" that contains wildcards such that when the
 # wildcards are expanded, the pattern will allow retrieval of all
 # available "tidy" files.
-tidyvcf_pattern: 02_haplotyping_results/02_contig_VCFs/**/*.tvcf.tsv
+tidyvcf_pattern: "*.tvcf.tsv"
 
 # FASTA header line parsing can be tedious and error prone. Here,
 # we try to make it a little less so. Say you have a defline that
@@ -33,3 +33,9 @@ split1_char: " "
 split1_index: -1
 split2_char: "="
 split2_index: -1
+
+# Directions for amplicon, sample, and contig names
+ivar_split_char: "_"
+id_split_index: 0
+hap_split_index: -1
+# ampl_split_index: 1:2
