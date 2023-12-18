@@ -30,10 +30,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 
 import polars as pl
-from icecream import ic  # type: ignore
+from icecream import ic  # type: ignore # pylint: disable=import-error
 from result import Err, Ok, Result
 from strictyaml import Int, Map, Str, YAMLError, load  # type: ignore
-from tqdm import tqdm  # type: ignore
+from tqdm import tqdm  # type: ignore # pylint: disable=import-error
 
 
 @dataclass
