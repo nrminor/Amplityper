@@ -84,8 +84,6 @@ workflow {
 		SUBSET_BED_FILE.out.bed
 	)
 
-	SPLIT_PRIMER_COMBOS.out.count().view()
-
 
 	GET_PRIMER_SEQS (
 		SPLIT_PRIMER_COMBOS.out.flatten()
@@ -213,13 +211,13 @@ workflow {
 		ch_refgff
 	)
 
-	GENERATE_FINAL_REPORT (
-		GENERATE_TIDY_VCF.out.collect(),
-		GENERATE_IVAR_TABLE.out.collect(),
-		NAME_HAPLOTYPES.out.collect(),
-		CROSS_REF_WITH_GENES.out,
-		ch_reporting_yaml
-	)
+	// GENERATE_FINAL_REPORT (
+	// 	GENERATE_TIDY_VCF.out.collect(),
+	// 	GENERATE_IVAR_TABLE.out.collect(),
+	// 	NAME_HAPLOTYPES.out.collect(),
+	// 	CROSS_REF_WITH_GENES.out,
+	// 	ch_reporting_yaml
+	// )
 
 }
 // --------------------------------------------------------------- //
