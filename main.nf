@@ -292,6 +292,7 @@ process RESPLICE_PRIMERS {
 
 	tag "${params.desired_amplicon}"
     label "general"
+	publishDir params.results, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
