@@ -51,6 +51,9 @@ class ConfigParams:
     split1_index: int
     split2_char: str
     split2_index: int
+    ivar_split_char: str
+    id_split_index: int
+    hap_split_index: int
 
 
 def parse_command_line_args() -> Result[argparse.Namespace, str]:
@@ -121,6 +124,9 @@ def parse_configurations(config_path: Path) -> Result[ConfigParams, str]:
             "split1_index": Int(),
             "split2_char": Str(),
             "split2_index": Int(),
+            "ivar_split_char": Str(),
+            "id_split_index": Int(),
+            "hap_split_index": Int(),
         }
     )
 
@@ -142,6 +148,9 @@ def parse_configurations(config_path: Path) -> Result[ConfigParams, str]:
         split1_index=cast(int, config_dict.get("split1_index")),
         split2_char=str(config_dict.get("split1_char")),
         split2_index=cast(int, config_dict.get("split2_index")),
+        ivar_split_char=str(config_dict.get("ivar_split_char")),
+        id_split_index=cast(int, config_dict.get("id_split_index")),
+        hap_split_index=cast(int, config_dict.get("hap_split_index")),
     )
 
     ic("Configurations parsed.")
@@ -201,7 +210,9 @@ def _check_cleanliness(path_parts: tuple[str, ...]) -> bool:
     return True
 
 
-def compile_data_with_io(file_list: List[Path]) -> Result[pl.LazyFrame, str]:
+def compile_data_with_io(
+    file_list: List[Path], config: ConfigParams
+) -> Result[pl.LazyFrame, str]:
     """
         Function `compile_data_with_io()` takes the list of paths and
         reads each file, parsing it with Polars, and writing it into one
@@ -238,11 +249,10 @@ def compile_data_with_io(file_list: List[Path]) -> Result[pl.LazyFrame, str]:
         for i, file in enumerate(file_list):
             progress_bar.update(1)
             # Parse out information in the file path to add into the dataframe
-            # NOTE: this hardcoding will eventually be replaced with config params
-            amplicon = str(file.parent).split("results/amplicon_")[1].split("/")[0]
             simplename = os.path.basename(file).replace(".tsv", "")
-            sample_id = simplename.split("_")[0]
-            contig = simplename.split("_")[-1]
+            sample_id = simplename.split(config.ivar_split_char)[config.id_split_index]
+            contig = simplename.split(config.ivar_split_char)[config.hap_split_index]
+            amplicon = simplename.replace(sample_id, "").replace(contig, "")
             if len(sample_id) == 1:
                 continue
 
@@ -1055,7 +1065,7 @@ def main() -> None:
     clean_ivar_list, clean_fasta_list, clean_tvcf_list = collect_results.unwrap()
 
     # compile all files into one Polars LazyFrame to be queried downstream
-    all_contigs_result = compile_data_with_io(clean_ivar_list)
+    all_contigs_result = compile_data_with_io(clean_ivar_list, config_result.unwrap())
     if isinstance(all_contigs_result, Err):
         sys.exit(
             f"A dataframe could not be compiled.\n{all_contigs_result.unwrap_err()}"
