@@ -624,7 +624,7 @@ process FIND_COMPLETE_AMPLICONS {
 	-o primer_orients/${sample_id}_\${primer_combo}_amplicons_comp.fastq.gz
 
 	# combine them into one fastq
-	seqkit scat -j ${task.cpus} primer_orients/ -o ${sample_id}_\${primer_combo}_amplicons.fastq.gz
+	seqkit scat -j ${task.cpus} --find-only primer_orients/ -o ${sample_id}_\${primer_combo}_amplicons.fastq.gz
     """
 
 }
