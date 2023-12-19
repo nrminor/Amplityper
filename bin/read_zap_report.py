@@ -47,10 +47,8 @@ class ConfigParams:
     ivar_pattern: Path
     fasta_pattern: Path
     tidyvcf_pattern: Path
-    split1_char: str
-    split1_index: int
-    split2_char: str
-    split2_index: int
+    fasta_split_char: str
+    fasta_split_index: int
     ivar_split_char: str
     id_split_index: int
     hap_split_index: int
@@ -144,10 +142,8 @@ def parse_configurations(config_path: Path) -> Result[ConfigParams, str]:
         ivar_pattern=cast(Path, config_dict.get("ivar_pattern")),
         fasta_pattern=cast(Path, config_dict.get("fasta_pattern")),
         tidyvcf_pattern=cast(Path, config_dict.get("tidyvcf_pattern")),
-        split1_char=str(config_dict.get("split1_char")),
-        split1_index=cast(int, config_dict.get("split1_index")),
-        split2_char=str(config_dict.get("split1_char")),
-        split2_index=cast(int, config_dict.get("split2_index")),
+        fasta_split_char=str(config_dict.get("fasta_split_char")),
+        fasta_split_index=cast(int, config_dict.get("fasta_split_index")),
         ivar_split_char=str(config_dict.get("ivar_split_char")),
         id_split_index=cast(int, config_dict.get("id_split_index")),
         hap_split_index=cast(int, config_dict.get("hap_split_index")),
@@ -251,8 +247,8 @@ def compile_data_with_io(
             # Parse out information in the file path to add into the dataframe
             simplename = os.path.basename(file).replace(".tsv", "")
             sample_id = simplename.split(config.ivar_split_char)[config.id_split_index]
-            contig = simplename.split(config.ivar_split_char)[config.hap_split_index]
-            amplicon = simplename.replace(sample_id, "").replace(contig, "")
+            haplotype = simplename.split(config.ivar_split_char)[config.hap_split_index]
+            amplicon = simplename.replace(sample_id, "").replace(haplotype, "")
             if len(sample_id) == 1:
                 continue
 
@@ -266,8 +262,8 @@ def compile_data_with_io(
             ).with_columns(
                 pl.lit(sample_id).alias("Sample ID"),
                 pl.lit(amplicon).alias("Amplicon"),
-                pl.lit(contig).alias("Contig"),
-                pl.lit(f"{amplicon}-{sample_id}-{contig}").alias(
+                pl.lit(haplotype).alias("Contig"),
+                pl.lit(f"{amplicon}-{sample_id}-{haplotype}").alias(
                     "Amplicon-Sample-Contig"
                 ),
             ).write_csv(temp, separator="\t", include_header=write_header)
@@ -389,7 +385,7 @@ def _is_valid_utf8(fasta_line: str) -> bool:
 
 
 def generate_seq_dict(
-    fasta_path: Path, input_fasta: List[str], split_char: str
+    fasta_path: Path, input_fasta: List[str], config: ConfigParams
 ) -> Optional[Dict[Optional[str], Optional[int]]]:
     """
         The function `generate_seq_dict()` uses a series of list comprehensions
@@ -426,7 +422,7 @@ def generate_seq_dict(
     ]
     deflines = [line for line in input_fasta if line.startswith(">")]
     supports = [
-        _try_parse_int(line.split(split_char)[-1])
+        _try_parse_int(line.split(config.fasta_split_char)[config.fasta_split_index])
         for line in input_fasta
         if line.startswith(">")
     ]
@@ -508,7 +504,7 @@ def compile_mutation_codons(tvcf_list: List[Path]) -> pl.LazyFrame:
     return amassed_codons
 
 
-def compile_contig_depths(fasta_list: List[Path]) -> pl.LazyFrame:
+def compile_contig_depths(fasta_list: List[Path], config: ConfigParams) -> pl.LazyFrame:
     """
         Function `compile_contig_depths()` loops through all FASTA files
         in a provided list of FASTA Paths and creates a Polars LazyFrame containing
@@ -538,7 +534,7 @@ def compile_contig_depths(fasta_list: List[Path]) -> pl.LazyFrame:
                     f"The FASTA at the following path could not be decoded to utf-8:\n{fasta}"
                 )
                 continue
-            seq_dict = generate_seq_dict(fasta, fasta_lines, "_")
+            seq_dict = generate_seq_dict(fasta, fasta_lines, config)
             if seq_dict is None:
                 print(
                     f"The FASTA at the following path could not be decoded to utf-8:\n{fasta}"
@@ -966,6 +962,7 @@ def aggregate_haplotype_df(
     tvcf_list: List[Path],
     clean_fasta_list: List[Path],
     gene_bed: Path,
+    config: ConfigParams,
 ) -> pl.DataFrame:
     """
         Function `aggregate_haplotype_df()` oversees the construction of a final
@@ -1002,7 +999,7 @@ def aggregate_haplotype_df(
     short_df = construct_short_df(long_df, gene_df)
 
     # Compile depths from contig FASTA files
-    depth_df = compile_contig_depths(clean_fasta_list)
+    depth_df = compile_contig_depths(clean_fasta_list, config)
 
     # add FASTA information about depth of coverage per-contig consensus
     # onto the lazyframe with a join
@@ -1073,7 +1070,11 @@ def main() -> None:
 
     # aggregate a dataframe containing information to be reported out for review
     final_df = aggregate_haplotype_df(
-        all_contigs_result.unwrap(), clean_tvcf_list, clean_fasta_list, gene_bed
+        all_contigs_result.unwrap(),
+        clean_tvcf_list,
+        clean_fasta_list,
+        gene_bed,
+        config_result.unwrap(),
     )
 
     # Sort the lazyframe first by contig frequency and then by position/amplicon

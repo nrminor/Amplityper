@@ -16,23 +16,9 @@ fasta_pattern: "*_haplotypes.fasta"
 # available "tidy" files.
 tidyvcf_pattern: "*.tvcf.tsv"
 
-# FASTA header line parsing can be tedious and error prone. Here,
-# we try to make it a little less so. Say you have a defline that
-# looks like this:
-#
-# >SRR23121149_QIAseq_167_splice1_haplotype_1 size=41
-#
-# We use two sets of splits and indices for the resulting lists
-# to retrieve the informatiom we want--in this case, what we want
-# is the integer "41" at the end, as this number represents to
-# sequencing read coverage for that haplotype. To retrieve it,
-# we first split by spaces and keep the last item ("size=41",
-# index -1), and then split that item by "=" and keep the last
-# item from that split, 41.
-split1_char: " "
-split1_index: -1
-split2_char: "="
-split2_index: -1
+# FASTA header line splitting character and index
+fasta_split_char: "="
+fasta_split_index: -1
 
 # Directions for amplicon, sample, and contig names
 ivar_split_char: "_"
