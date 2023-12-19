@@ -243,7 +243,7 @@ def compile_data_with_io(
         for i, file in enumerate(file_list):
             progress_bar.update(1)
             # Parse out information in the file path to add into the dataframe
-            simplename = os.path.basename(file).replace(".tsv", "")
+            simplename = os.path.basename(file).replace("_ivar.tsv", "")
             sample_id = simplename.split(config.ivar_split_char)[config.id_split_index]
             haplotype = simplename.split(config.ivar_split_char)[config.hap_split_index]
             amplicon = simplename.replace(sample_id, "").replace(haplotype, "")
@@ -365,6 +365,9 @@ def _try_parse_identifier(defline: str) -> Optional[str]:
     sample_id = items[0]
     (haplotype,) = [item for item in items if "haplotype" in item]
     amplicon = defline.replace(sample_id, "").replace(haplotype, "")
+
+    amplicon = amplicon[1:] if amplicon[0] == "_" else amplicon
+    amplicon = amplicon[:-2] if amplicon[-1] == "_" else amplicon
 
     identifier = f"{amplicon}-{sample_id}-{haplotype}"
 
