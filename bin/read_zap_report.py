@@ -247,6 +247,10 @@ def compile_data_with_io(
             sample_id = simplename.split(config.ivar_split_char)[config.id_split_index]
             haplotype = simplename.split(config.ivar_split_char)[config.hap_split_index]
             amplicon = simplename.replace(sample_id, "").replace(haplotype, "")
+
+            amplicon = amplicon[1:] if amplicon[0] == "_" else amplicon
+            amplicon = amplicon[:-2] if amplicon[-1] == "_" else amplicon
+
             if len(sample_id) == 1:
                 continue
 
