@@ -1239,6 +1239,7 @@ process GENERATE_FINAL_REPORT {
 
 	/* */
 
+	label "general"
 	tag "${params.desired_amplicon}"
 	publishDir params.amplicon_results, mode: 'copy', overwrite: true
 

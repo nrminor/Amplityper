@@ -462,11 +462,13 @@ def compile_mutation_codons(tvcf_list: List[Path]) -> pl.LazyFrame:
             progress_bar.update(1)
             variants = pl.read_csv(tidy_vcf, separator="\t")
 
-            # do a couple checks to make sure the loop doesn't hang on unexpected
+            # do a few checks to make sure the loop doesn't hang on unexpected
             # file writes
             if variants.shape[0] == 0:
                 continue
             if len(set(variants.columns).intersection({"ref", "pos", "alt"})) != 3:
+                continue
+            if "info_ANN" not in variants.columns and "NUC_SUB" not in variants.columns:
                 continue
 
             variants = variants.with_columns(
