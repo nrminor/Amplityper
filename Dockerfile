@@ -54,6 +54,13 @@ RUN apt-get install -y libssl-dev && \
 RUN cargo install nanoq
 
 # Install fastp
+RUN cd /opt && \
+    mkdir fastp && \
+    cd fastp && \
+    wget http://opengene.org/fastp/fastp.0.23.4 && \
+    mv fastp.0.23.4 fastp && \
+    chmod a+x ./fastp
+ENV PATH=$PATH:/opt/fastp
 
 # Install HTSLib
 RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
