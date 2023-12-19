@@ -1,24 +1,23 @@
 #!/usr/bin/env python3
 
 """
-This module compiles and evaluates the results from the READ-ZAP amplicon-based
+This module compiles and evaluates the results from the Amplityper amplicon-based
 haplotype phasing pipeline. In particular, it reports the haplotypes at each amplicon,
 sorted by the frequencies, alongside the synonymous and nonsynonymous mutations in
 those haplotypes.
 
-Example usage:
+
 ```
-usage: rz_report [-h] --results_dir RESULTS_DIR --gene_bed GENE_BED [--config CONFIG]
+usage: amplityper_report.py [-h] --results_dir RESULTS_DIR --gene_bed GENE_BED [--config CONFIG]
 
 options:
-    -h, --help      show this help message and exit
+    -h, --help            show this help message and exit
     --results_dir RESULTS_DIR, -d RESULTS_DIR
-                    Results 'root' directory to traverse in search if iVar tables and other files.
+                        Results 'root' directory to traverse in search if iVar tables and other files
     --gene_bed GENE_BED, -b GENE_BED
-                    BED of amplicons where the final column contains genes associated with each
-                    amplicon.
+                        BED of amplicons where the final column contains genes associated with each amplicon
     --config CONFIG, -c CONFIG
-                    YAML file used to configure module such that it avoids harcoding.
+                        YAML file used to configure module such that it avoids harcoding
 ```
 """
 
@@ -162,7 +161,7 @@ def construct_file_list(
 
     Args:
         `results_dir: Path`: A Pathlib path instance recording the results
-        "root" directory, which is the top of the READ-ZAP results hierarchy.
+        "root" directory, which is the top of the Amplityper results hierarchy.
         `ivar_pattern: Path`: A Pathlib path instance containing wildcards
         that can be expanded to the desired files.
 

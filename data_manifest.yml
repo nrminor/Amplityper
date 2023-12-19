@@ -26,5 +26,5 @@ files:
   url: null
 remotes: {}
 metadata:
-  title: READ-ZAP
-  description: Read Extraction And De novo assembly for Zero-error Amplicon Phasing
+  title: Amplityper
+  description: PCR Amplicon-driven Haplotype Phasing

@@ -1156,7 +1156,7 @@ process GENERATE_FINAL_REPORT {
 
 	script:
 	"""
-	read_zap_report.py \
+	amplityper_report.py \
 	--results_dir . \
 	--gene_bed ${gene_bed} \
 	--config ${config}

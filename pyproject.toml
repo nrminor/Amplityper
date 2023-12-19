@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "read-zap"
+name = "Amplityper"
 version = "0.1.0"
-description = "Read Extraction And De novo assembly for Zero-error Amplicon Phasing."
+description = "PCR Amplicon-driven Haplotype Phasing"
 authors = ["Nicholas Minor <nrminor@wisc.edu>"]
 license = "MIT"
 readme = "README.md"
