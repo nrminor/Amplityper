@@ -353,7 +353,7 @@ def _try_parse_int(value: str) -> Optional[int]:
         return None
 
 
-def _try_parse_identifier(defline: str, amplicon: str) -> Optional[str]:
+def _try_parse_identifier(defline: str) -> Optional[str]:
     """
     Helper function that splits a contig's FASTA defline by the "_" symbol,
     pulls a sample id assuming it is the second item in the underscore-split
@@ -363,11 +363,12 @@ def _try_parse_identifier(defline: str, amplicon: str) -> Optional[str]:
     and amplicons.
     """
 
-    items = defline.split(" ")[-1].split("=")[-1]
-    sample_id = items[1]
-    (contig,) = [item for item in items if "contig" in item]
+    items = defline.split(" ")[0].split("_")
+    sample_id = items[0]
+    (haplotype,) = [item for item in items if "haplotype" in item]
+    amplicon = defline.replace(sample_id, "").replace(haplotype, "")
 
-    identifier = f"{amplicon}-{sample_id}-{contig}"
+    identifier = f"{amplicon}-{sample_id}-{haplotype}"
 
     return identifier
 
@@ -385,7 +386,7 @@ def _is_valid_utf8(fasta_line: str) -> bool:
 
 
 def generate_seq_dict(
-    fasta_path: Path, input_fasta: List[str], config: ConfigParams
+    input_fasta: List[str], config: ConfigParams
 ) -> Optional[Dict[Optional[str], Optional[int]]]:
     """
         The function `generate_seq_dict()` uses a series of list comprehensions
@@ -397,8 +398,6 @@ def generate_seq_dict(
         coverage.
 
     Args:
-        `fasta_path: Path`: A Pathlib Path type pointing to the FASTA of
-        interest.
         `input_fasta: List[str]`: Parsed FASTA lines store as strings in a list.
         `split_char: str`: The character, e.g. "-", to use for splitting the
         FASTA defline to parse out information.
@@ -415,18 +414,13 @@ def generate_seq_dict(
     if False in decodable:
         return None
 
-    (amplicon,) = [
-        item.replace("amplicon_", "")
-        for item in os.path.normpath(fasta_path).split(os.sep)
-        if "amplicon" in item
-    ]
     deflines = [line for line in input_fasta if line.startswith(">")]
     supports = [
         _try_parse_int(line.split(config.fasta_split_char)[config.fasta_split_index])
         for line in input_fasta
         if line.startswith(">")
     ]
-    identifiers = [_try_parse_identifier(defline, amplicon) for defline in deflines]
+    identifiers = [_try_parse_identifier(defline) for defline in deflines]
 
     assert len(deflines) == len(
         identifiers
@@ -534,7 +528,7 @@ def compile_contig_depths(fasta_list: List[Path], config: ConfigParams) -> pl.La
                     f"The FASTA at the following path could not be decoded to utf-8:\n{fasta}"
                 )
                 continue
-            seq_dict = generate_seq_dict(fasta, fasta_lines, config)
+            seq_dict = generate_seq_dict(fasta_lines, config)
             if seq_dict is None:
                 print(
                     f"The FASTA at the following path could not be decoded to utf-8:\n{fasta}"
