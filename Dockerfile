@@ -50,6 +50,11 @@ RUN cargo install tidyvcf
 RUN apt-get install -y libssl-dev && \
     cargo install fastqc-rs
 
+# Install nanoq
+RUN cargo install nanoq
+
+# Install fastp
+
 # Install HTSLib
 RUN wget https://github.com/samtools/htslib/releases/download/1.17/htslib-1.17.tar.bz2 && \
     tar -vxjf htslib-1.17.tar.bz2 && \

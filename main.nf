@@ -108,15 +108,19 @@ workflow {
 	}
 
     FIND_ADAPTER_SEQS (
-        CLUMP_READS.out
+        RUN_FASTP.out
     )
 
 	TRIM_ADAPTERS (
         FIND_ADAPTER_SEQS.out
 	)
 
+	RUN_FASTP (
+        TRIM_ADAPTERS.out
+	)
+
     FIND_COMPLETE_AMPLICONS (
-        TRIM_ADAPTERS.out,
+        RUN_FASTP.out,
         GET_PRIMER_SEQS.out
     )
 
@@ -152,8 +156,12 @@ workflow {
 
 	} else {
 
-		REMOVE_ARTIFACTS (
+		RUN_NANOQ (
 			FIND_COMPLETE_AMPLICONS.out
+		)
+
+		REMOVE_ARTIFACTS (
+			RUN_NANOQ.out
 		)
 
 		QUALITY_TRIM (
@@ -168,6 +176,10 @@ workflow {
 			.filter { it[3] >= params.min_reads }
 			.map { name, combo, reads, count -> tuple( name, combo, file(reads) ) }
     )
+
+	FASTP_REPORT (
+		VALIDATE_SEQS.out
+	)
 
 	FASTQC (
 		VALIDATE_SEQS.out
@@ -253,7 +265,9 @@ params.error_correct = params.preprocessing + "/08_error_correct"
 params.qtrim = params.preprocessing + "/09_quality_trim"
 params.clipped = params.preprocessing + "/10_clipped_reads"
 params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
-params.fastqc_results = params.preprocessing + "/12_FastQC_results"
+params.qc_reports = params.preprocessing + "/12_QC_results"
+params.fastqc_results = params.qc_reports + "/FastQC_results"
+params.fastp_results = params.qc_reports + "/fastp_results"
 
 // haplotyping results
 params.haplotyping_results = params.amplicon_results + "/02_haplotyping_results"
@@ -538,6 +552,30 @@ process TRIM_ADAPTERS {
 
 }
 
+process RUN_FASTP {
+
+	/* */
+
+	tag "${sample_id}"
+    label "general"
+	publishDir params.trim_adapters, mode: params.pubMode, overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	input:
+	tuple val(sample_id), path(reads), path(adapters)
+
+    output:
+    tuple val(sample_id), path("${sample_id}_fastp_cleaned.fastq.gz")
+
+	script:
+	"""
+	fastp --low_complexity_filter -i ${reads} -o ${sample_id}_fastp_cleaned.fastq.gz
+	"""
+
+}
+
 process FIND_COMPLETE_AMPLICONS {
 
     /*
@@ -667,6 +705,35 @@ process REMOVE_LOW_QUALITY_REGIONS {
 		out=${sample_id}_${primer_combo}_filtered.fastq.gz \
 		threads=${task.cpus}
 		"""
+
+}
+
+process RUN_NANOQ {
+
+	/*
+	*/
+
+	tag "${sample_id}"
+    label "general"
+	publishDir params.remove_artifacts, pattern: "*.fastq.gz", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	cpus 1
+
+	input:
+	tuple val(sample_id), val(primer_combo), path(reads)
+
+	output:
+	tuple val(sample_id), val(primer_combo), path("${sample_id}_${primer_combo}_nanoq.fastq.gz")
+
+	script:
+	"""
+	nanoq -i ${reads} \
+	-r ${sample_id}_${primer_combo}_nanoq_report.txt \
+	> ${sample_id}_${primer_combo}_nanoq.fastq.gz
+	"""
 
 }
 
@@ -861,6 +928,33 @@ process VALIDATE_SEQS {
 	--validate-seq \
     -o ${sample_id}_${primer_combo}_filtered.fastq.gz
 	"""
+}
+
+process FASTP_REPORT {
+
+    /*
+    */
+
+	tag "${sample_id}"
+    label "general"
+	publishDir params.fastp_results, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	cpus 1
+
+	input:
+	tuple val(sample_id), val(primer_combo), path(reads)
+
+	output:
+	path "${sample_id}_${primer_combo}_fastp.html"
+
+	script:
+	"""
+	fastp -i ${reads} --html ${sample_id}_${primer_combo}_fastp.html
+	"""
+
 }
 
 process FASTQC {
