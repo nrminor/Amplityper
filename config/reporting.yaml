@@ -4,7 +4,7 @@
 # A file path "pattern" that contains wildcards such that when the
 # wildcards are expanded, the pattern will allow retrieval of all
 # available iVar variant tables.
-ivar_pattern: "*_ivar_*.tsv"
+ivar_pattern: "*_ivar.tsv"
 
 # A file path "pattern" that contains wildcards such that when the
 # wildcards are expanded, the pattern will allow retrieval of all
