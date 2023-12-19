@@ -249,7 +249,7 @@ def compile_data_with_io(
             amplicon = simplename.replace(sample_id, "").replace(haplotype, "")
 
             amplicon = amplicon[1:] if amplicon[0] == "_" else amplicon
-            amplicon = amplicon[:-2] if amplicon[-1] == "_" else amplicon
+            amplicon = amplicon[:-1] if amplicon[-1] == "_" else amplicon
 
             if len(sample_id) == 1:
                 continue
@@ -365,13 +365,14 @@ def _try_parse_identifier(defline: str) -> Optional[str]:
     and amplicons.
     """
 
-    items = defline.split(" ")[0].split("_")
+    cleaned_defline = defline.replace(">", "").split(" ")[0]
+    items = cleaned_defline.split("_")
     sample_id = items[0]
     (haplotype,) = [item for item in items if "haplotype" in item]
-    amplicon = defline.replace(sample_id, "").replace(haplotype, "")
+    amplicon = cleaned_defline.replace(sample_id, "").replace(haplotype, "")
 
     amplicon = amplicon[1:] if amplicon[0] == "_" else amplicon
-    amplicon = amplicon[:-2] if amplicon[-1] == "_" else amplicon
+    amplicon = amplicon[:-1] if amplicon[-1] == "_" else amplicon
 
     identifier = f"{amplicon}-{sample_id}-{haplotype}"
 
@@ -579,19 +580,19 @@ def generate_gene_df(gene_bed: Path) -> pl.LazyFrame:
                 "Start Position",
                 "Stop Position",
                 "NAME",
+                "RESPLICE_NAME",
                 "INDEX",
-                "SENSE",
                 "Gene",
             ],
         )
-        .select("NAME", "Gene")
+        .select("RESPLICE_NAME", "Gene")
         .with_columns(
-            pl.col("NAME")
+            pl.col("RESPLICE_NAME")
             .str.replace("_RIGHT", "")
             .str.replace("_LEFT", "")
             .alias("Amplicon")
         )
-        .drop("NAME")
+        .drop("RESPLICE_NAME")
         .unique()
         .join(
             (
@@ -604,21 +605,21 @@ def generate_gene_df(gene_bed: Path) -> pl.LazyFrame:
                         "Start Position",
                         "Stop Position",
                         "NAME",
+                        "RESPLICE_NAME",
                         "INDEX",
-                        "SENSE",
                         "Gene",
                     ],
                 )
-                .drop("Ref", "SENSE", "INDEX")
-                .filter(pl.col("NAME").str.contains("_LEFT"))
+                .drop("Ref", "INDEX")
+                .filter(pl.col("RESPLICE_NAME").str.contains("_LEFT"))
                 .drop("Stop Position")
                 .with_columns(
-                    pl.col("NAME")
+                    pl.col("RESPLICE_NAME")
                     .str.replace("_RIGHT", "")
                     .str.replace("_LEFT", "")
                     .alias("Amplicon")
                 )
-                .drop("NAME", "Gene")
+                .drop("NAME", "RESPLICE_NAME", "Gene")
                 .unique()
             ),
             how="left",
@@ -635,21 +636,21 @@ def generate_gene_df(gene_bed: Path) -> pl.LazyFrame:
                         "Start Position",
                         "Stop Position",
                         "NAME",
+                        "RESPLICE_NAME",
                         "INDEX",
-                        "SENSE",
                         "Gene",
                     ],
                 )
-                .drop("Ref", "SENSE", "INDEX")
-                .filter(pl.col("NAME").str.contains("_RIGHT"))
+                .drop("Ref", "INDEX")
+                .filter(pl.col("RESPLICE_NAME").str.contains("_RIGHT"))
                 .drop("Start Position")
                 .with_columns(
-                    pl.col("NAME")
+                    pl.col("RESPLICE_NAME")
                     .str.replace("_RIGHT", "")
                     .str.replace("_LEFT", "")
                     .alias("Amplicon")
                 )
-                .drop("NAME", "Gene")
+                .drop("NAME", "RESPLICE_NAME", "Gene")
                 .unique()
             ),
             how="left",
