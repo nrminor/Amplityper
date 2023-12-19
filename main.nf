@@ -86,7 +86,8 @@ workflow {
 
 
 	GET_PRIMER_SEQS (
-		SPLIT_PRIMER_COMBOS.out.flatten()
+		SPLIT_PRIMER_COMBOS.out.flatten(),
+		ch_refseq
 	)
 
 	if ( params.illumina_pe == true ) {
@@ -382,7 +383,9 @@ process SUBSET_BED_FILE {
 
     script:
     """
-    grep ${params.desired_amplicon} ${bed_file} > all_primer_combos.bed
+	csvtk grep -t -H -f 4 -r \
+	-p ${params.desired_amplicon} \
+	`realpath ${bed_file}` > all_primer_combos.bed
     """
 
 }
@@ -424,6 +427,7 @@ process GET_PRIMER_SEQS {
 
 	input:
 	path bed
+	each path(refseq)
 
 	output:
 	path "patterns/"
@@ -431,7 +435,7 @@ process GET_PRIMER_SEQS {
 	script:
 	primer_combo = file(bed.toString()).getSimpleName()
 	"""
-	bedtools getfasta -fi ${params.reference} -bed ${bed} > primer_seqs.fasta
+	bedtools getfasta -fi ${refseq} -bed ${bed} > primer_seqs.fasta
 	seqkit seq --complement --validate-seq --seq-type DNA primer_seqs.fasta | \
 	grep -v "^>" > ${primer_combo}_comp_patterns.txt
 	cat primer_seqs.fasta | grep -v "^>" > ${primer_combo}_patterns.txt
