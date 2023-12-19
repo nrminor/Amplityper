@@ -108,7 +108,7 @@ workflow {
 	}
 
     FIND_ADAPTER_SEQS (
-        RUN_FASTP.out
+        CLUMP_READS.out
     )
 
 	TRIM_ADAPTERS (
