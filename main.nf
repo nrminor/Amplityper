@@ -412,13 +412,17 @@ process GET_PRIMER_SEQS {
 	path bed
 
 	output:
-	path "${primer_combo}_patterns.txt"
+	path "patterns/"
 
 	script:
 	primer_combo = file(bed.toString()).getSimpleName()
 	"""
-	bedtools getfasta -fi ${params.reference} -bed ${bed} | \
-	grep -v "^>" > ${primer_combo}_patterns.txt
+	bedtools getfasta -fi ${params.reference} -bed ${bed} > primer_seqs.fasta
+	seqkit seq --complement --validate-seq primer_seqs.fasta | \
+	grep -v "^>" > ${primer_combo}_comp_patterns.txt
+	primer_seqs.fasta | grep -v "^>" > ${primer_combo}_patterns.txt
+	mkdir patterns
+	mv ${primer_combo}_comp_patterns.txt ${primer_combo}_patterns.txt patterns/
 	"""
 }
 
@@ -558,18 +562,39 @@ process FIND_COMPLETE_AMPLICONS {
     script:
 	primer_combo = file(search_patterns.toString()).getSimpleName().replace("_patterns", "")
     """
+
+	mkdir primer_orients
+
+	# find primers in the "template" orientation
 	cat ${reads} | \
     seqkit grep \
 	--threads 2 \
 	--max-mismatch 3 \
 	--by-seq \
-	--pattern `head -n 1 ${search_patterns}` | \
+	--pattern `head -n 1 ${search_patterns}/${primer_combo}_patterns.txt` | \
 	seqkit grep \
 	--threads 2 \
 	--max-mismatch 3 \
 	--by-seq \
-	--pattern `tail -n 1 ${search_patterns}` \
-    -o ${sample_id}_${primer_combo}_amplicons.fastq.gz
+	--pattern `tail -n 1 ${search_patterns}/${primer_combo}_patterns.txt` \
+    -o primer_orients/${sample_id}_${primer_combo}_amplicons_temp.fastq.gz
+
+	# find primers in the complement orientation
+	cat ${reads} | \
+    seqkit grep \
+	--threads 2 \
+	--max-mismatch 3 \
+	--by-seq \
+	--pattern `head -n 1 ${search_patterns}/${primer_combo}_comp_patterns.txt ` | \
+	seqkit grep \
+	--threads 2 \
+	--max-mismatch 3 \
+	--by-seq \
+	--pattern `tail -n 1 ${search_patterns}/${primer_combo}_comp_patterns.txt ` \
+    -o primer_orients/${sample_id}_${primer_combo}_amplicons_comp.fastq.gz
+
+	# combine them into one fastq
+	seqkit scat -j ${task.cpus} primer_orients -o ${sample_id}_${primer_combo}_amplicons.fastq.gz
     """
 
 }
