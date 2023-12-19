@@ -564,7 +564,7 @@ process RUN_FASTP {
 	maxRetries 2
 
 	input:
-	tuple val(sample_id), path(reads), path(adapters)
+	tuple val(sample_id), path(reads)
 
     output:
     tuple val(sample_id), path("${sample_id}_fastp_cleaned.fastq.gz")
