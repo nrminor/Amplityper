@@ -112,8 +112,8 @@ python-arm:
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
 alias pyarm := python-arm
 
-[macos, confirm]
 # install all packages for Intel chip Macs
+[macos, confirm]
 macos-x86:
     just homebrew-x86
     just local-builds
@@ -121,8 +121,8 @@ macos-x86:
     just r-packages
     just python-x86
 
-[macos, confirm]
 # install all packages for Apple chip Macs
+[macos, confirm]
 macos-arm:
     just homebrew-arm
     just local-builds
@@ -130,8 +130,8 @@ macos-arm:
     just r-packages
     just python-arm
 
-[linux, confirm]
 # Install all packages for Linux ubuntu systems
+[linux, confirm]
 ubuntu:
     just ubuntu-apt-get
     just rust
