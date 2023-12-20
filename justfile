@@ -74,7 +74,6 @@ ubuntu-apt-get:
 local-builds:
     touch ~/.zprofile
     -mkdir ~/bioinformatics
-    cd ~/bioinformatics
     wget https://sourceforge.net/projects/bbmap/files/latest/download -O ~/bioinformatics/bbmap.tar.gz
     -tar -xzf ~/bioinformatics/bbmap.tar.gz
     rm ~/bioinformatics/bbmap.tar.gz

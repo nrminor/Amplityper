@@ -25,6 +25,7 @@ import argparse
 import os
 import sys
 from dataclasses import dataclass
+import itertools
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 
@@ -544,8 +545,12 @@ def compile_contig_depths(fasta_list: List[Path], config: ConfigParams) -> pl.La
             seq_dicts.append(seq_dict)
     progress_bar.close()
 
-    identifiers = [list(d.keys())[0] for d in seq_dicts]
-    supports = [list(d.values())[0] for d in seq_dicts]
+    identifiers = list(
+        itertools.chain.from_iterable(seq_dict.keys() for seq_dict in seq_dicts)
+    )
+    supports = list(
+        itertools.chain.from_iterable(seq_dict.values() for seq_dict in seq_dicts)
+    )
 
     depth_df = pl.LazyFrame(
         {"Amplicon-Sample-Contig": identifiers, "Depth of Coverage": supports}
@@ -702,14 +707,15 @@ def construct_long_df(
                 "Amplicon-Sample-Contig",
             ]
         )
+        .unique()
         .with_columns(
             pl.concat_str(
                 [pl.col("REF"), pl.col("POS"), pl.col("ALT")], separator="-"
             ).alias("NUC_SUB")
         )
-        .drop(["REF", "POS", "ALT"])
         .join(gene_df, how="left", on="Amplicon")
         .join(codon_df, how="left", on="NUC_SUB")
+        .unique()
         .with_columns(
             pl.when(pl.col("CODON").is_null())
             .then(
@@ -718,9 +724,8 @@ def construct_long_df(
                         pl.col("REF_AA"),
                         pl.lit("->"),
                         pl.col("ALT_AA"),
-                        pl.lit("(Codon unknown; nucleotide position is:"),
-                        pl.col("NUC_SUB"),
-                        pl.lit(")"),
+                        pl.lit("at nuc. position"),
+                        pl.col("POS"),
                     ],
                     separator=" ",
                 )
@@ -732,6 +737,7 @@ def construct_long_df(
             )
             .alias("AA_SUB")
         )
+        .drop(["REF", "POS", "ALT"])
         .with_columns(
             pl.concat_str([pl.col("Gene"), pl.col("AA_SUB")], separator=": ").alias(
                 "AA_SUB"
@@ -753,7 +759,6 @@ def construct_long_df(
             ).alias("Nonsynonymous")
         )
         .drop(["REF_AA", "ALT_AA", "CODON"])
-        .unique()
     )
 
     return long_df
@@ -779,7 +784,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
     ic("Constructing a pivoted dataframe of all unique contigs from each amplicon.")
 
     short_df = (
-        long_df.unique(subset="Amplicon-Sample-Contig", maintain_order=True)
+        long_df.unique(subset="Amplicon-Sample-Contig")
         .select(["Amplicon-Sample-Contig"])
         .join(
             long_df.select(
@@ -792,10 +797,11 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
             on="Amplicon-Sample-Contig",
             how="left",
         )
-        .join(gene_df, how="left", on="Amplicon")
+        .unique()
+        .join(gene_df, how="left", on="Amplicon", validate="m:1")
         .join(
             long_df.select(["Amplicon-Sample-Contig", "NUC_SUB"])
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("NUC_SUB"))
             .with_columns(
                 pl.col("NUC_SUB").list.join(", ").alias("Nucleotide Substitutions")
@@ -806,7 +812,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
         )
         .join(
             long_df.select(["Amplicon-Sample-Contig", "NUC_SUB"])
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("NUC_SUB").count())
             .with_columns(pl.col("NUC_SUB").alias("Nuc Mut Count"))
             .drop("NUC_SUB"),
@@ -816,7 +822,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
         .join(
             long_df.select(["Amplicon-Sample-Contig", "AA_SUB", "Synonymous"])
             .filter(pl.col("Synonymous"))
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB"))
             .with_columns(
                 pl.col("AA_SUB").list.join(", ").alias("Synonymous Mutations")
@@ -828,7 +834,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
         .join(
             long_df.select(["Amplicon-Sample-Contig", "AA_SUB", "Synonymous"])
             .filter(pl.col("Synonymous"))
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB").count())
             .with_columns(pl.col("AA_SUB").alias("Syn count"))
             .drop("AA_SUB"),
@@ -838,7 +844,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
         .join(
             long_df.select(["Amplicon-Sample-Contig", "AA_SUB", "Nonsynonymous"])
             .filter(pl.col("Nonsynonymous"))
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB"))
             .with_columns(
                 pl.col("AA_SUB").list.join(", ").alias("Nonsynonymous Mutations")
@@ -850,7 +856,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
         .join(
             long_df.select(["Amplicon-Sample-Contig", "AA_SUB", "Nonsynonymous"])
             .filter(pl.col("Nonsynonymous"))
-            .group_by("Amplicon-Sample-Contig", maintain_order=True)
+            .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB").count())
             .with_columns(pl.col("AA_SUB").alias("Nonsyn count"))
             .drop("AA_SUB"),
@@ -903,6 +909,7 @@ def compute_crude_dnds_ratio(short_df: pl.LazyFrame) -> pl.LazyFrame:
         .with_columns((-(3 / 4) * (1 - (4 * pl.col("ps") / 3)).log()).alias("ds"))
         .with_columns((pl.col("dn") / pl.col("ds")).alias("Crude dN/dS Ratio"))
         .drop("pn", "ps", "dn", "ds")
+        .unique()
     )
 
     return new_df
@@ -938,7 +945,8 @@ def assign_haplotype_names(unnamed_df: pl.LazyFrame) -> pl.DataFrame:
         cols = df.columns
         new_cols = ["Haplotype"] + cols
         new_df = (
-            df.sort("Depth of Coverage", descending=True)
+            df.unique()
+            .sort("Depth of Coverage", descending=True)
             .with_row_count(offset=1)
             .cast({"row_nr": pl.Utf8})
             .with_columns(
@@ -1002,11 +1010,13 @@ def aggregate_haplotype_df(
     # Compile depths from contig FASTA files
     depth_df = compile_contig_depths(clean_fasta_list, config)
 
+    depth_df.collect().write_csv("test.tsv", separator="\t")
+
     # add FASTA information about depth of coverage per-contig consensus
     # onto the lazyframe with a join
     ic("Joining per-contig depth information.")
     short_df_with_depth = short_df.join(
-        depth_df, on="Amplicon-Sample-Contig", how="left"
+        depth_df, on="Amplicon-Sample-Contig", how="left", validate="1:1"
     ).filter(~pl.col("Depth of Coverage").is_null())
 
     # generate crude dn/ds ratios
