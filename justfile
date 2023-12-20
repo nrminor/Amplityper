@@ -4,13 +4,15 @@ default:
 # Install the Rust toolchain and the crates used by Amplityper
 rust:
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
-    cargo install tidyvcf && \
-    cargo install fastqc-rs && \
-    cargo install nanoq && \
+    cargo install tidyvcf
+    cargo install fastqc-rs
+    cargo install nanoq
     cargo install scidataflow
+    cargo install nushell
+alias rs := rust
 
 # Install Intel-chip MacOS packages available via homebrew
-homebrew-x86:
+homebrew:
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
     -brew install \
     wget \
@@ -28,25 +30,8 @@ homebrew-x86:
     fastp \
     r
     -brew install --cask docker
-
-# Install Apple-chip MacOS packages available via homebrew
-homebrew-arm:
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
-    -brew install \
-    wget \
-    curl \
-    zstd \
-    pigz \
-    unzip \
-    java \
-    samtools \
-    bcftools \
-    bedtools \
-    seqkit \
-    csvtk \
-    vsearch \
-    r
-    -brew install --cask docker
+alias brew := homebrew
+alias hb := homebrew
 
 # Install Ubuntu packages via apt-get
 ubuntu-apt-get:
@@ -99,11 +84,13 @@ local-builds:
     rm snpEff_latest_core.zip
     chmod +x snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/snpEff/exec" >> ~/.zprofile
+alias lb := local-builds
 
 # R libraries
 r-packages:
     Rscript -e "install.packages('tidyverse',  repos='http://cran.us.r-project.org', clean = TRUE)"
     Rscript -e "install.packages('arrow',  repos='http://cran.us.r-project.org', clean = TRUE)"
+alias r := r-packages
 
 # Install Python packages for x86 (Intel chips)
 python-x86:
@@ -113,6 +100,7 @@ python-x86:
     python3 -m pip install -r requirements.txt
     poetry install
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
+alias py86 := python-x86
 
 # Install Python packages for ARM (Apple chips)
 python-arm:
@@ -122,7 +110,9 @@ python-arm:
     python3 -m pip install -r requirements.txt
     poetry install
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
+alias pyarm := python-arm
 
+[macos, confirm]
 # install all packages for Intel chip Macs
 macos-x86:
     just homebrew-x86
@@ -131,6 +121,7 @@ macos-x86:
     just r-packages
     just python-x86
 
+[macos, confirm]
 # install all packages for Apple chip Macs
 macos-arm:
     just homebrew-arm
@@ -139,6 +130,7 @@ macos-arm:
     just r-packages
     just python-arm
 
+[linux, confirm]
 # Install all packages for Linux ubuntu systems
 ubuntu:
     just ubuntu-apt-get
