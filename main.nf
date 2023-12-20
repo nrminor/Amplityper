@@ -86,7 +86,8 @@ workflow {
 
 
 	GET_PRIMER_SEQS (
-		SPLIT_PRIMER_COMBOS.out.flatten()
+		SPLIT_PRIMER_COMBOS.out.flatten(),
+		ch_refseq
 	)
 
 	if ( params.illumina_pe == true ) {
@@ -291,6 +292,7 @@ process RESPLICE_PRIMERS {
 
 	tag "${params.desired_amplicon}"
     label "general"
+	publishDir params.results, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -382,7 +384,9 @@ process SUBSET_BED_FILE {
 
     script:
     """
-    grep ${params.desired_amplicon} ${bed_file} > all_primer_combos.bed
+	csvtk grep -t -H -f 4 -r \
+	-p ${params.desired_amplicon} \
+	`realpath ${bed_file}` > all_primer_combos.bed
     """
 
 }
@@ -424,6 +428,7 @@ process GET_PRIMER_SEQS {
 
 	input:
 	path bed
+	each path(refseq)
 
 	output:
 	path "patterns/"
@@ -431,7 +436,7 @@ process GET_PRIMER_SEQS {
 	script:
 	primer_combo = file(bed.toString()).getSimpleName()
 	"""
-	bedtools getfasta -fi ${params.reference} -bed ${bed} > primer_seqs.fasta
+	bedtools getfasta -fi ${refseq} -bed ${bed} > primer_seqs.fasta
 	seqkit seq --complement --validate-seq --seq-type DNA primer_seqs.fasta | \
 	grep -v "^>" > ${primer_combo}_comp_patterns.txt
 	cat primer_seqs.fasta | grep -v "^>" > ${primer_combo}_patterns.txt
@@ -624,7 +629,7 @@ process FIND_COMPLETE_AMPLICONS {
 	-o primer_orients/${sample_id}_\${primer_combo}_amplicons_comp.fastq.gz
 
 	# combine them into one fastq
-	seqkit scat -j ${task.cpus} primer_orients/ -o ${sample_id}_\${primer_combo}_amplicons.fastq.gz
+	seqkit scat -j ${task.cpus} --find-only primer_orients/ -o ${sample_id}_\${primer_combo}_amplicons.fastq.gz
     """
 
 }
