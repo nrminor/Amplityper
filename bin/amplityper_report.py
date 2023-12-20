@@ -457,9 +457,11 @@ def compile_mutation_codons(tvcf_list: List[Path]) -> pl.LazyFrame:
     if os.path.isfile("tmp.tvcf"):
         os.remove("tmp.tvcf")
 
+    header_written = False
+
     progress_bar = tqdm(total=len(tvcf_list), ncols=100)
     with open("tmp.tvcf", "a", encoding="utf-8") as tmp_file:
-        for i, tidy_vcf in enumerate(tvcf_list):
+        for tidy_vcf in tvcf_list:
             progress_bar.update(1)
             variants = pl.read_csv(tidy_vcf, separator="\t")
 
@@ -490,7 +492,11 @@ def compile_mutation_codons(tvcf_list: List[Path]) -> pl.LazyFrame:
             num_codons = [int(codon) if codon != "" else None for codon in codons]
 
             # decide whether to write header or just append rows
-            write_header = bool(i == 0)
+            if header_written is False:
+                write_header = True
+                header_written = True
+            else:
+                write_header = False
 
             # write out
             pl.DataFrame({"NUC_SUB": nuc_subs, "CODON": num_codons}).unique().write_csv(
@@ -1009,8 +1015,6 @@ def aggregate_haplotype_df(
 
     # Compile depths from contig FASTA files
     depth_df = compile_contig_depths(clean_fasta_list, config)
-
-    depth_df.collect().write_csv("test.tsv", separator="\t")
 
     # add FASTA information about depth of coverage per-contig consensus
     # onto the lazyframe with a join
