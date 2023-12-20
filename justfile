@@ -19,7 +19,6 @@ homebrew:
     pigz \
     unzip \
     java \
-    perl \
     samtools \
     bcftools \
     bedtools \
