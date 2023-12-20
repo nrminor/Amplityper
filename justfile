@@ -9,8 +9,8 @@ rust:
     cargo install nanoq && \
     cargo install scidataflow
 
-# Install MacOS packages available via homebrew
-homebrew:
+# Install Intel-chip MacOS packages available via homebrew
+homebrew-x86:
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
     -brew install \
     wget \
@@ -26,6 +26,25 @@ homebrew:
     csvtk \
     vsearch \
     fastp \
+    r
+    -brew install --cask docker
+
+# Install Apple-chip MacOS packages available via homebrew
+homebrew-arm:
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
+    -brew install \
+    wget \
+    curl \
+    zstd \
+    pigz \
+    unzip \
+    java \
+    samtools \
+    bcftools \
+    bedtools \
+    seqkit \
+    csvtk \
+    vsearch \
     r
     -brew install --cask docker
 
@@ -84,6 +103,7 @@ local-builds:
 # R libraries
 r-packages:
     Rscript -e "install.packages('tidyverse',  repos='http://cran.us.r-project.org', clean = TRUE)"
+    Rscript -e "install.packages('arrow',  repos='http://cran.us.r-project.org', clean = TRUE)"
 
 # Install Python packages for x86 (Intel chips)
 python-x86:
@@ -91,7 +111,8 @@ python-x86:
     bash Miniforge3-$(uname)-$(uname -m).sh
     mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
     python3 -m pip install -r requirements.txt
-    pip install -r requirements.txt
+    poetry install
+    @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
 
 # Install Python packages for ARM (Apple chips)
 python-arm:
@@ -99,10 +120,12 @@ python-arm:
     bash Miniforge3-$(uname)-$(uname -m).sh
     mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
     python3 -m pip install -r requirements.txt
+    poetry install
+    @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
 
 # install all packages for Intel chip Macs
 macos-x86:
-    just homebrew
+    just homebrew-x86
     just local-builds
     just rust
     just r-packages
@@ -110,7 +133,7 @@ macos-x86:
 
 # install all packages for Apple chip Macs
 macos-arm:
-    just homebrew
+    just homebrew-arm
     just local-builds
     just rust
     just r-packages

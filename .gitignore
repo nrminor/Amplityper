@@ -185,6 +185,8 @@ data/
 dev/
 *.log
 remaining.lock
+amplicons.txt
+run_all_amplicons.sh
 
 
 # Added by cargo
