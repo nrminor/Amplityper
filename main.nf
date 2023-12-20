@@ -385,7 +385,7 @@ process SUBSET_BED_FILE {
     script:
     """
 	csvtk grep -t -H -f 4 -r \
-	-p ${params.desired_amplicon} \
+	-p "${params.desired_amplicon}_" \
 	`realpath ${bed_file}` > all_primer_combos.bed
     """
 
