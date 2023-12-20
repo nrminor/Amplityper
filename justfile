@@ -1,6 +1,7 @@
 default:
     just --list
 
+# Install the Rust toolchain and the crates used by Amplityper
 rust:
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y && \
     cargo install tidyvcf && \
@@ -8,6 +9,7 @@ rust:
     cargo install nanoq && \
     cargo install scidataflow
 
+# Install MacOS packages available via homebrew
 homebrew:
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" && \
     brew install \
@@ -28,6 +30,7 @@ homebrew:
     r
     -brew install --cask docker
 
+# Install Ubuntu packages via apt-get
 ubuntu-apt-get:
     apt update && \
     apt install software-properties-common -y && \
@@ -64,6 +67,7 @@ ubuntu-apt-get:
     python3.12-distutils \
     r-base
 
+# Packages to build from source localled
 local-builds:
     touch ~/.zprofile
     -mkdir ~/bioinformatics
@@ -78,9 +82,11 @@ local-builds:
     chmod +x snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/snpEff/exec" >> ~/.zprofile
 
+# R libraries
 r-packages:
     Rscript -e "install.packages('tidyverse', clean = TRUE)"
 
+# Install Python packages for x86 (Intel chips)
 python-x86:
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh
@@ -88,6 +94,7 @@ python-x86:
     python3 -m pip install -r requirements.txt
     pip install -r requirements.txt
 
+# Install Python packages for ARM (Apple chips)
 python-arm:
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
     bash Miniforge3-$(uname)-$(uname -m).sh
