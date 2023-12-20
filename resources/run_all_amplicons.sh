@@ -1,13 +1,14 @@
 #!/bin/bash
 
 # Check if a text file and fastq path are provided
-if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <amplicon_bed_file> <path_to_data_dir>"
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <amplicon_bed_file> <path_to_data_dir> <min_reads>"
     exit 1
 fi
 
 # construct amplicon file
 cut -f 4 $1 | sed 's/_LEFT//g' | sed 's/_RIGHT//g' | sort -u | uniq -u  > amplicons.txt
+
 
 # check if the script has been run before
 if [ -f "remaining_amplicons.txt" ]; then
@@ -51,6 +52,7 @@ do
     nextflow run . \
     --fastq_dir "$fastq_dir" \
     --desired_amplicon "$amplicon" \
+    --min_reads $3 \
     -profile local \
     -resume
 

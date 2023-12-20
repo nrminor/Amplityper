@@ -186,6 +186,8 @@ dev/
 *.log
 remaining.lock
 amplicons.txt
+complete_log.txt
+remaining_amplicons.txt
 run_all_amplicons.sh
 
 
