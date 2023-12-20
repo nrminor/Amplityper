@@ -95,8 +95,8 @@ alias r := r-packages
 # Install Python packages for x86 (Intel chips)
 python-x86:
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3-$(uname)-$(uname -m).sh
-    mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
+    bash Miniforge3-$(uname)-$(uname -m).sh -b
+    /Users/$(id -un)/miniforge3/condabin/mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
     python3 -m pip install -r requirements.txt
     poetry install
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
@@ -105,8 +105,8 @@ alias py86 := python-x86
 # Install Python packages for ARM (Apple chips)
 python-arm:
     wget "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-    bash Miniforge3-$(uname)-$(uname -m).sh
-    mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
+    bash Miniforge3-$(uname)-$(uname -m).sh -b
+    /Users/$(id -un)/miniforge3/condabin/mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
     python3 -m pip install -r requirements.txt
     poetry install
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
