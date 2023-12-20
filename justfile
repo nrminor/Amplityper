@@ -75,14 +75,14 @@ local-builds:
     touch ~/.zprofile
     -mkdir ~/bioinformatics
     cd ~/bioinformatics
-    wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz
-    -tar -xzf bbmap.tar.gz
-    rm bbmap.tar.gz
+    wget https://sourceforge.net/projects/bbmap/files/latest/download -O ~/bioinformatics/bbmap.tar.gz
+    -tar -xzf ~/bioinformatics/bbmap.tar.gz
+    rm ~/bioinformatics/bbmap.tar.gz
     echo "export PATH=$PATH:~/bioinformatics/bbmap" >> ~/.zprofile
-    wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip
-    -unzip snpEff_latest_core.zip
-    rm snpEff_latest_core.zip
-    chmod +x snpEff/exec/*
+    wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O ~/bioinformatics/snpEff_latest_core.zip
+    -unzip ~/bioinformatics/snpEff_latest_core.zip
+    rm ~/bioinformatics/npEff_latest_core.zip
+    chmod +x ~/bioinformatics/snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/snpEff/exec" >> ~/.zprofile
 alias lb := local-builds
 
@@ -98,8 +98,8 @@ python:
     -bash Miniforge3-$(uname)-$(uname -m).sh -b -u
     /Users/$(id -un)/miniforge3/condabin/mamba install -y -c conda-forge python==3.12.0 poetry==1.7.1
     rm -f Miniforge3-$(uname)-$(uname -m).sh
-    python3 -m pip install -r requirements.txt
-    poetry install
+    # python3 -m pip install -r requirements.txt
+    poetry install --no-root
     @echo "It is recommended to run `poetry shell` in this directory before using Amplityper."
 alias py := python
 
