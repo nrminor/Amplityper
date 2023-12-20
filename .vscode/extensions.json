@@ -5,6 +5,7 @@
         "usernamehw.errorlens",
         "github.vscode-github-actions",
         "mechatroner.rainbow-csv",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "skellock.just"
     ]
 }
