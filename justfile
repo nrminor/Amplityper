@@ -113,7 +113,8 @@ python-arm:
 alias pyarm := python-arm
 
 # install all packages for Intel chip Macs
-[macos, confirm]
+[macos]
+[confirm]
 macos-x86:
     just homebrew-x86
     just local-builds
@@ -122,7 +123,8 @@ macos-x86:
     just python-x86
 
 # install all packages for Apple chip Macs
-[macos, confirm]
+[macos]
+[confirm]
 macos-arm:
     just homebrew-arm
     just local-builds
@@ -131,7 +133,8 @@ macos-arm:
     just python-arm
 
 # Install all packages for Linux ubuntu systems
-[linux, confirm]
+[linux]
+[confirm]
 ubuntu:
     just ubuntu-apt-get
     just rust
