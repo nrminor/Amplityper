@@ -83,7 +83,7 @@ local-builds:
 
 # R libraries
 r-packages:
-    Rscript -e "install.packages('tidyverse', clean = TRUE)"
+    Rscript -e "install.packages('tidyverse',  repos='http://cran.us.r-project.org', clean = TRUE)"
 
 # Install Python packages for x86 (Intel chips)
 python-x86:
