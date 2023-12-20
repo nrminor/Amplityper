@@ -28,7 +28,7 @@ homebrew:
     r
     -brew install --cask docker
 
-ubunut-apt-get:
+ubuntu-apt-get:
     apt update && \
     apt install software-properties-common -y && \
     apt update && \
@@ -65,11 +65,12 @@ ubunut-apt-get:
     r-base
 
 local-builds:
+    touch ~/.zprofile
     -mkdir ~/bioinformatics
     cd ~/bioinformatics
-    -wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz
+    wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbmap.tar.gz
     -tar -xzf bbmap.tar.gz
-    -rm bbmap.tar.gz
+    rm bbmap.tar.gz
     echo "export PATH=$PATH:~/bioinformatics/bbmap" >> ~/.zprofile
     wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip
     -unzip snpEff_latest_core.zip
