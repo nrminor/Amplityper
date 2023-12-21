@@ -3,16 +3,36 @@
 nextflow.enable.dsl = 2
 
 
+// prints to the screen and to the log
+log.info	"""
+			Amplityper (version 0.1.0)
+			===================================
+			fastq_dir    : ${params.fastq_dir}
+			results_dir  : ${params.results}
+			primer_bed   : ${params.primer_bed}
+			amplicon     : ${params.desired_amplicon}
+			fwd_suffix   : ${params.fwd_suffix}
+			rev_suffix   : ${params.rev_suffix}
+
+			Sequence read format:
+			-----------------------------------
+			Illumina paired : ${params.illumina_pe}
+			Illumina single : ${single_short_reads}
+			Long reads      : ${params.long_reads}
+
+			QC Settings:
+			-----------------------------------
+			Minimum reads : ${params.min_reads}
+
+			[debug-mode  : ${params.debugmode}]
+			[cleanup     : ${params.cleanup}]
+			[cpus        : ${params.available_cpus}]
+			"""
+			.stripIndent()
 
 // WORKFLOW SPECIFICATION
 // --------------------------------------------------------------- //
 workflow {
-
-	println()
-    println("Note: This workflow currently only supports amplicons sequenced on an Illumina paired-end platform.")
-    println("Support for long reads (PacBio and Oxford Nanopore) will be added in the future.")
-	println("-----------------------------------------------------------------------------------------------")
-	println()
 
 	assert (
 		( params.long_reads == true && params.illumina_pe == false ) ||
@@ -116,12 +136,8 @@ workflow {
         FIND_ADAPTER_SEQS.out
 	)
 
-	RUN_FASTP (
-        TRIM_ADAPTERS.out
-	)
-
     FIND_COMPLETE_AMPLICONS (
-        RUN_FASTP.out,
+        TRIM_ADAPTERS.out,
         GET_PRIMER_SEQS.out
     )
 
@@ -177,10 +193,6 @@ workflow {
 			.filter { it[3] >= params.min_reads }
 			.map { name, combo, reads, count -> tuple( name, combo, file(reads) ) }
     )
-
-	FASTP_REPORT (
-		VALIDATE_SEQS.out
-	)
 
 	FASTQC (
 		VALIDATE_SEQS.out
@@ -268,7 +280,6 @@ params.clipped = params.preprocessing + "/10_clipped_reads"
 params.complete_amplicon = params.preprocessing + "/11_complete amplicons"
 params.qc_reports = params.preprocessing + "/12_QC_results"
 params.fastqc_results = params.qc_reports + "/FastQC_results"
-params.fastp_results = params.qc_reports + "/fastp_results"
 
 // haplotyping results
 params.haplotyping_results = params.amplicon_results + "/02_haplotyping_results"
@@ -554,30 +565,6 @@ process TRIM_ADAPTERS {
 	ref=`realpath ${adapters}` \
 	uniquenames=t overwrite=true t=${task.cpus} -Xmx8g
     """
-
-}
-
-process RUN_FASTP {
-
-	/* */
-
-	tag "${sample_id}"
-    label "general"
-	publishDir params.trim_adapters, mode: params.pubMode, overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-	input:
-	tuple val(sample_id), path(reads)
-
-    output:
-    tuple val(sample_id), path("${sample_id}_fastp_cleaned.fastq.gz")
-
-	script:
-	"""
-	fastp --low_complexity_filter -i ${reads} -o ${sample_id}_fastp_cleaned.fastq.gz
-	"""
 
 }
 
@@ -933,33 +920,6 @@ process VALIDATE_SEQS {
 	--validate-seq \
     -o ${sample_id}_${primer_combo}_filtered.fastq.gz
 	"""
-}
-
-process FASTP_REPORT {
-
-    /*
-    */
-
-	tag "${sample_id}"
-    label "general"
-	publishDir params.fastp_results, mode: 'copy', overwrite: true
-
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 2
-
-	cpus 1
-
-	input:
-	tuple val(sample_id), val(primer_combo), path(reads)
-
-	output:
-	path "${sample_id}_${primer_combo}_fastp.html"
-
-	script:
-	"""
-	fastp -i ${reads} --html ${sample_id}_${primer_combo}_fastp.html
-	"""
-
 }
 
 process FASTQC {
