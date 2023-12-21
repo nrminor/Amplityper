@@ -74,12 +74,12 @@ ubuntu-apt-get:
 local-builds:
     touch ~/.zprofile
     -mkdir ~/bioinformatics
-    wget https://sourceforge.net/projects/bbmap/files/latest/download -O ~/bioinformatics/bbmap.tar.gz
-    -tar -xzf ~/bioinformatics/bbmap.tar.gz
+    wget -q https://sourceforge.net/projects/bbmap/files/latest/download -O ~/bioinformatics/bbmap.tar.gz
+    -tar -xzf ~/bioinformatics/bbmap.tar.gz -C ~/bioinformatics
     rm ~/bioinformatics/bbmap.tar.gz
     echo "export PATH=$PATH:~/bioinformatics/bbmap" >> ~/.zprofile
-    wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O ~/bioinformatics/snpEff_latest_core.zip
-    -unzip ~/bioinformatics/snpEff_latest_core.zip
+    wget -q https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O ~/bioinformatics/snpEff_latest_core.zip
+    -unzip ~/bioinformatics/snpEff_latest_core.zip -d ~/bioinformatics/
     rm ~/bioinformatics/npEff_latest_core.zip
     chmod +x ~/bioinformatics/snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/snpEff/exec" >> ~/.zprofile
