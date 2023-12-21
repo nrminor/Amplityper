@@ -231,8 +231,8 @@ def compile_data_with_io(
     # Double check that foles from a previous run aren't present
     if os.path.isfile("tmp.tsv"):
         os.remove("tmp.tsv")
-    if os.path.isfile("contigs_long_table.arrow"):
-        os.remove("contigs_long_table.arrow")
+    if os.path.isfile("tmp.arrow"):
+        os.remove("tmp.arrow")
 
     if len(file_list) == 0:
         return Err("No files found to compile data from.")
@@ -276,9 +276,9 @@ def compile_data_with_io(
     # lazily scan the new tmp tsv for usage downstream
     pl.scan_csv("tmp.tsv", separator="\t", infer_schema_length=1500).sort(
         "POS"
-    ).sink_ipc("contigs_long_table.arrow", compression="zstd")
+    ).sink_ipc("tmp.arrow", compression="zstd")
 
-    all_contigs = pl.scan_ipc("contigs_long_table.arrow", memory_map=False)
+    all_contigs = pl.scan_ipc("tmp.arrow", memory_map=False)
     os.remove("tmp.tsv")
 
     return Ok(all_contigs)
@@ -767,6 +767,8 @@ def construct_long_df(
         .drop(["REF_AA", "ALT_AA", "CODON"])
     )
 
+    long_df.collect().write_ipc("haplotype_long_table.arrow", compression="zstd")
+
     return long_df
 
 
@@ -1107,6 +1109,10 @@ def main() -> None:
             }
         },
     )
+
+    # clear temporary arrow structure
+    if os.path.isfile("tmp.arrow"):
+        os.remove("tmp.arrow")
 
 
 if __name__ == "__main__":
