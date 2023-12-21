@@ -7,12 +7,12 @@ nextflow.enable.dsl = 2
 log.info	"""
 			Amplityper (version 0.1.0)
 			===================================
-			fastq_dir    : ${params.fastq_dir}
-			results_dir  : ${params.results}
-			primer_bed   : ${params.primer_bed}
-			amplicon     : ${params.desired_amplicon}
-			fwd_suffix   : ${params.fwd_suffix}
-			rev_suffix   : ${params.rev_suffix}
+			fastq_dir       : ${params.fastq_dir}
+			results_dir     : ${params.results}
+			primer_bed      : ${params.primer_bed}
+			amplicon        : ${params.desired_amplicon}
+			fwd_suffix      : ${params.fwd_suffix}
+			rev_suffix      : ${params.rev_suffix}
 
 			Sequence read format:
 			-----------------------------------
@@ -22,11 +22,11 @@ log.info	"""
 
 			QC Settings:
 			-----------------------------------
-			Minimum reads : ${params.min_reads}
+			Minimum reads   : ${params.min_reads}
 
-			[debug-mode  : ${params.debugmode}]
-			[cleanup     : ${params.cleanup}]
-			[cpus        : ${params.available_cpus}]
+			[debug-mode     : ${params.debugmode}]
+			[cleanup        : ${params.cleanup}]
+			[available cpus : ${params.available_cpus}]
 			"""
 			.stripIndent()
 
