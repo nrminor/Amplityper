@@ -77,11 +77,10 @@ local-builds:
     wget -q https://sourceforge.net/projects/bbmap/files/latest/download -O ~/bioinformatics/bbmap.tar.gz
     -tar -xzf ~/bioinformatics/bbmap.tar.gz -C ~/bioinformatics
     rm ~/bioinformatics/bbmap.tar.gz
-    echo "export PATH=$PATH:~/bioinformatics/bbmap" >> ~/.zprofile
     wget -q https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O ~/bioinformatics/snpEff_latest_core.zip
     -unzip ~/bioinformatics/snpEff_latest_core.zip -d ~/bioinformatics/
     chmod +x ~/bioinformatics/snpEff/exec/*
-    echo "export PATH=$PATH:~/bioinformatics/snpEff/exec" >> ~/.zprofile
+    echo "export PATH=$PATH:~/bioinformatics/bbmap:~/bioinformatics/snpEff/exec" >> ~/.zprofile
 alias lb := local-builds
 
 # R libraries
