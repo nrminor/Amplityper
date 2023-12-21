@@ -328,7 +328,6 @@ process GET_GENE_BED {
 
 	tag "${params.desired_amplicon}"
     label "general"
-	publishDir params.results, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
@@ -354,6 +353,7 @@ process CROSS_REF_WITH_GENES {
 
 	tag "${params.desired_amplicon}"
     label "general"
+	publishDir params.results, mode: 'copy', overwrite: true
 
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
