@@ -78,7 +78,7 @@ local-builds:
     -tar -xzf ~/bioinformatics/bbmap.tar.gz -C ~/bioinformatics
     rm ~/bioinformatics/bbmap.tar.gz
     wget -q https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip -O ~/bioinformatics/snpEff_latest_core.zip
-    -unzip ~/bioinformatics/snpEff_latest_core.zip -d ~/bioinformatics/
+    -unzip -qq ~/bioinformatics/snpEff_latest_core.zip -d ~/bioinformatics/
     chmod +x ~/bioinformatics/snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/bbmap:~/bioinformatics/snpEff/exec" >> ~/.zprofile
     @echo "Successfully install snpEff and bbmap."
