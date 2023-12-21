@@ -251,17 +251,21 @@ def compile_data_with_io(
             amplicon = amplicon[1:] if amplicon[0] == "_" else amplicon
             amplicon = amplicon[:-1] if amplicon[-1] == "_" else amplicon
 
-            if len(sample_id) == 1:
-                continue
-
             # quick test of whether the header should be written. It is only written
             # the first time
             write_header = bool(i == 0)
 
             # Read the csv, modify it, and write it onto the growing temporary tsv
-            pl.read_csv(
+            ivar_df = pl.read_csv(
                 file, separator="\t", raise_if_empty=True, null_values=["NA", ""]
-            ).with_columns(
+            )
+
+            # make empty row for haplotype info if iVar called no variants
+            if ivar_df.shape[0] == 0:
+                ivar_df.vstack(ivar_df.clear(n=1), in_place=True)
+
+            # Add sample, amplicon, and haplotype information
+            ivar_df.with_columns(
                 pl.lit(sample_id).alias("Sample ID"),
                 pl.lit(amplicon).alias("Amplicon"),
                 pl.lit(haplotype).alias("Contig"),
