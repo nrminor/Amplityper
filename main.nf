@@ -17,7 +17,7 @@ log.info	"""
 			Sequence read format:
 			-----------------------------------
 			Illumina paired : ${params.illumina_pe}
-			Illumina single : ${single_short_reads}
+			Illumina single : ${params.single_short_reads}
 			Long reads      : ${params.long_reads}
 
 			QC Settings:
