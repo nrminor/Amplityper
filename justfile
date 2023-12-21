@@ -81,7 +81,7 @@ local-builds:
     -unzip -qq ~/bioinformatics/snpEff_latest_core.zip -d ~/bioinformatics/
     chmod +x ~/bioinformatics/snpEff/exec/*
     echo "export PATH=$PATH:~/bioinformatics/bbmap:~/bioinformatics/snpEff/exec" >> ~/.zprofile
-    @echo "Successfully install snpEff and bbmap."
+    @echo "Successfully installed snpEff and bbmap."
 alias lb := local-builds
 
 # R libraries
