@@ -467,7 +467,7 @@ process MERGE_PAIRS {
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
 	maxRetries 2
 
-	cpus 4
+	cpus ${params.max_cpus}
 
     input:
 	tuple val(sample_id), path(reads1), path(reads2)
