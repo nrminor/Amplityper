@@ -7,7 +7,10 @@ if [ "$#" -ne 3 ]; then
 fi
 
 # construct amplicon file
-cut -f 4 $1 | sed 's/_LEFT//g' | sed 's/_RIGHT//g' | sort -u | uniq -u  > amplicons.txt
+cut -f 4 resources/qiaseq_direct_boosted.bed \
+| sed 's/_LEFT//g' | sed 's/_RIGHT//g' \
+| sed 's/-5//g' | sed 's/-4//g' | sed 's/-3//g' |  sed 's/-2//g' \
+| sort -u | uniq -u > amplicons.txt
 
 
 # check if the script has been run before
