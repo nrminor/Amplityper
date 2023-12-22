@@ -810,7 +810,7 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
             how="left",
         )
         .unique()
-        .join(gene_df, how="left", on="Amplicon", validate="m:1")
+        .join(gene_df, how="left", on="Amplicon")
         .join(
             long_df.select(["Amplicon-Sample-Contig", "NUC_SUB"])
             .group_by("Amplicon-Sample-Contig")
@@ -1026,7 +1026,7 @@ def aggregate_haplotype_df(
     # onto the lazyframe with a join
     ic("Joining per-contig depth information.")
     short_df_with_depth = short_df.join(
-        depth_df, on="Amplicon-Sample-Contig", how="left", validate="1:1"
+        depth_df, on="Amplicon-Sample-Contig", how="left"
     ).filter(~pl.col("Depth of Coverage").is_null())
 
     # generate crude dn/ds ratios

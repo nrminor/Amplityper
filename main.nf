@@ -1204,6 +1204,9 @@ process GENERATE_FINAL_REPORT {
 	tag "${params.desired_amplicon}"
 	publishDir params.amplicon_results, mode: 'copy', overwrite: true
 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
 	input:
 	path tvcf_files
 	path ivar_tables
