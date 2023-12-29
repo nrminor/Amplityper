@@ -56,6 +56,7 @@ do
     --fastq_dir "$fastq_dir" \
     --desired_amplicon "$amplicon" \
     --min_reads $3 \
+    --cleanup true \
     -profile local \
     -resume
 
