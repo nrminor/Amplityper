@@ -8,7 +8,7 @@ rust:
     cargo install fastqc-rs
     cargo install nanoq
     cargo install scidataflow
-    cargo install nu
+    cargo install nu --features=dataframe
 alias rs := rust
 
 # Install Intel-chip MacOS packages available via homebrew
