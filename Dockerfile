@@ -158,5 +158,8 @@ RUN python3 -m pip install -r /opt/requirements.txt
 RUN apt install -y r-base && \
     Rscript -e "install.packages('tidyverse', clean = TRUE)"
 
+# Install wgscovplot
+RUN python3 -m pip install wgscovplot
+
 # Run a bash shell by default when the container starts
 CMD ["/bin/bash"]

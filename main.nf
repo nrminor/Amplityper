@@ -244,6 +244,8 @@ workflow {
 		ch_reporting_yaml
 	)
 
+	// GENERATE_WGSCOVPLOT ()
+
 }
 // --------------------------------------------------------------- //
 
@@ -1224,6 +1226,32 @@ process GENERATE_FINAL_REPORT {
 	--results_dir . \
 	--gene_bed ${gene_bed} \
 	--config ${config}
+	"""
+
+}
+
+process GENERATE_WGSCOVPLOT {
+
+	/* */
+
+	label "general"
+	tag "${params.desired_amplicon}"
+	publishDir params.amplicon_results, mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 2
+
+	input:
+	path refseq
+
+	output:
+	path "wgscovplot.html"
+
+	script:
+	"""
+	wgscovplot \
+	--input-dir ${params.results} \
+	--ref-seq ${refseq}
 	"""
 
 }
