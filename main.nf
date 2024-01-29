@@ -372,8 +372,8 @@ process CROSS_REF_WITH_GENES {
     """
 	ref=`csvtk replace -t ${primer_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
 	unmatched=`csvtk replace -t ${gene_bed} -f 1 -p " " -r "" | cut -f 1 | uniq` && \
-	csvtk replace -H -t ${gene_bed} -p "\$unmatched" -r "\$ref" -o corrected.bed && \
-	bedtools intersect -a ${primer_bed} -b corrected.bed -wb | \
+	csvtk replace -H -t ${gene_bed} -p "\$unmatched" -r "\$ref" | \
+	bedtools intersect -a respliced.bed -b - -wb | \
 	csvtk cut -f 1,2,3,4,5,6,11 -t > ${bed_name}_with_genes.bed
     """
 
