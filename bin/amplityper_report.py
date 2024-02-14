@@ -719,9 +719,14 @@ def construct_long_df(
         )
         .unique()
         .with_columns(
-            pl.concat_str(
-                [pl.col("REF"), pl.col("POS"), pl.col("ALT")], separator="-"
-            ).alias("NUC_SUB")
+            pl.when(pl.col("ALT").is_null())
+            .then(None)
+            .otherwise(
+                pl.concat_str(
+                    [pl.col("REF"), pl.col("POS"), pl.col("ALT")], separator="-"
+                )
+            )
+            .alias("NUC_SUB")
         )
         .join(gene_df, how="left", on="Amplicon")
         .join(codon_df, how="left", on="NUC_SUB")
