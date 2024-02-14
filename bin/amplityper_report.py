@@ -821,7 +821,11 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
             .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("NUC_SUB"))
             .with_columns(
-                pl.col("NUC_SUB").list.join(", ").alias("Nucleotide Substitutions")
+                pl.when(pl.col("NUC_SUB").is_null())
+                .then(None)
+                .otherwise(
+                    pl.col("NUC_SUB").list.join(", ").alias("Nucleotide Substitutions")
+                )
             )
             .drop("NUC_SUB"),
             on="Amplicon-Sample-Contig",
@@ -842,7 +846,11 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
             .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB"))
             .with_columns(
-                pl.col("AA_SUB").list.join(", ").alias("Synonymous Mutations")
+                pl.when(pl.col("AA_SUB").is_null())
+                .then(None)
+                .otherwise(
+                    pl.col("AA_SUB").list.join(", ").alias("Synonymous Mutations")
+                )
             )
             .drop("AA_SUB"),
             on="Amplicon-Sample-Contig",
@@ -864,7 +872,11 @@ def construct_short_df(long_df: pl.LazyFrame, gene_df: pl.LazyFrame) -> pl.LazyF
             .group_by("Amplicon-Sample-Contig")
             .agg(pl.col("AA_SUB"))
             .with_columns(
-                pl.col("AA_SUB").list.join(", ").alias("Nonsynonymous Mutations")
+                pl.when(pl.col("AA_SUB").is_null())
+                .then(None)
+                .otherwise(
+                    pl.col("AA_SUB").list.join(", ").alias("Nonsynonymous Mutations")
+                )
             )
             .drop("AA_SUB"),
             on="Amplicon-Sample-Contig",
