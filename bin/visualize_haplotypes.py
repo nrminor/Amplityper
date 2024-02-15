@@ -136,7 +136,7 @@ async def adjust_with_offset(accum_df: pl.DataFrame) -> pl.DataFrame:
 
     for _, data in accum_df.group_by("Contig"):
         new_df = data.with_columns(
-            pl.col("insertion offset").cum_sum().alias("insertion offset")
+            pl.col("insertion offset").cum_sum().cast(pl.Int32).alias("insertion offset")
         )
         tmp_df.vstack(new_df, in_place=True)
 
