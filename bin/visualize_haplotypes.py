@@ -115,7 +115,7 @@ async def collect_sample_data(
                 "field_2": "Alt",
             }
         )
-        .with_columns(pl.col("Position").alias("Position"))
+        .with_columns(pl.col("Position").cast(pl.Int32).alias("Position"))
         .with_columns(
             (
                 (pl.col("Alt").str.len_chars() > 1) & ~(pl.col("Alt").str.contains("-"))
@@ -145,7 +145,7 @@ async def adjust_with_offset(accum_df: pl.DataFrame) -> pl.DataFrame:
 
     adjusted_df = (
         tmp_df.with_columns(
-            (pl.col("Position") + pl.col("insertion offset")).alias("Position")
+            (pl.col("Position") + pl.col("insertion offset")).cast(pl.Int32).alias("Position")
         )
         .sort("Position")
         .drop("whether insertion")
@@ -181,14 +181,13 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
         new_df = (
             data.explode("Alt")
             .filter(pl.col("Alt") != "")
-            .with_columns(pl.lit("-").alias("-").alias("Alt"))
             .with_row_count()
             .with_columns(
                 (pl.col("Position") + pl.col("row_nr")).cast(pl.Int32).alias("Position")
             )
             .drop("row_nr")
         )
-    accum_df.vstack(new_df, in_place=True)
+        accum_df.vstack(new_df, in_place=True)
 
     # insertions
     for _, data in in_lf.collect().group_by("Contig"):
@@ -199,11 +198,14 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
             .with_columns(
                 (pl.col("Position") + pl.col("row_nr")).cast(pl.Int32).alias("Position")
             )
+            .with_columns(
+                pl.col("insertion offset").cast(pl.Int32).alias("insertion offset")
+            )
             .drop("row_nr")
         )
         accum_df.vstack(new_df, in_place=True)
 
-        accum_df = accum_df.unique()
+    accum_df = accum_df.unique()
 
     adjusted_df = await adjust_with_offset(accum_df)
 
@@ -229,6 +231,9 @@ async def define_all_positions(
 
         final_df.vstack(
             pl.DataFrame({"Position": amplicon_positions})
+            .with_columns(
+                pl.col("Position").cast(pl.Int32)
+            )
             .join(
                 df.select("Position", "Alt", "Contig"),
                 how="left",
@@ -270,6 +275,9 @@ async def compile_plotting_data(
 
     plotting_lf = (
         pl.LazyFrame({"Position": amplicon_positions})
+        .with_columns(
+            pl.col("Position").cast(pl.Int32).alias("Position")
+        )
         .join(
             final_df.select("Position", "Alt", "Contig").lazy(),
             how="left",
@@ -301,8 +309,8 @@ async def compile_frequency_df(
         .with_columns(
             pl.col("Haplotype")
             .str.replace(amplicon, "")
-            .str.replace(" ", "")
             .str.to_lowercase()
+            .str.replace_all(" ", "")
             .alias("Haplotype")
         )
         .select("Haplotype", "Depth of Coverage")
