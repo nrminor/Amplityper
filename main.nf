@@ -238,7 +238,9 @@ workflow {
 
 	GENERATE_FINAL_REPORT (
 		GENERATE_TIDY_VCF.out.collect(),
-		GENERATE_IVAR_TABLE.out.collect(),
+		GENERATE_IVAR_TABLE.out
+			.map { table, id -> table }
+			.collect(),
 		NAME_HAPLOTYPES.out.collect(),
 		CROSS_REF_WITH_GENES.out,
 		ch_reporting_yaml
