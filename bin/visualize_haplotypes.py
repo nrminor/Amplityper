@@ -292,17 +292,12 @@ async def compile_frequency_df(
         depths_df.filter(pl.col("Sample ID") == sample_id)
         .filter(pl.col("Amplicon") == amplicon)
         .with_columns(
-            pl.col("Amplicon-Sample-Contig").str.splitn("-", 3).alias("id_split")
+            pl.col("Haplotype")
+            .str.replace(amplicon, "")
+            .str.replace(" ", "")
+            .str.to_lowercase()
+            .alias("Haplotype")
         )
-        .unnest("id_split")
-        .rename(
-            {
-                "field_0": "Ref",
-                "field_1": "Position",
-                "field_2": "Haplotype",
-            }
-        )
-        .drop("field_0", "field_1")
         .select("Haplotype", "Depth of Coverage")
         .with_columns(
             (pl.col("Depth of Coverage") / pl.col("Depth of Coverage").sum()).alias(
