@@ -503,7 +503,7 @@ def compile_mutation_codons(tvcf_list: List[Path]) -> pl.LazyFrame:
                 write_header = False
 
             # write out
-            pl.DataFrame({"NUC_SUB": nuc_subs, "CODON": num_codons}).unique().write_csv(
+            pl.DataFrame({"NUC_SUB": nuc_subs, "CODON": num_codons}).write_csv(
                 tmp_file, separator="\t", include_header=write_header
             )
     progress_bar.close()

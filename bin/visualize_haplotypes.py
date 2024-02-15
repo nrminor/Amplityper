@@ -183,7 +183,7 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
             .filter(pl.col("Alt") != "")
             .filter(pl.col("Alt") != "=")
             .with_columns(
-                pl.col("Alt").str.replace("(.*?)", "-").alias("Alt")
+                pl.col("Alt").str.replace("(.*)", "-").alias("Alt")
             )
             .with_row_count()
             .with_columns(
