@@ -1,4 +1,4 @@
-# /usr/bin/env python3
+#!/usr/bin/env python3
 
 """
 Script for visualizing a pileup of amplicon-derived haplotypes with an emphasis on their
