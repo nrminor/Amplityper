@@ -246,12 +246,12 @@ workflow {
 		ch_reporting_yaml
 	)
 
-	VISUALIZE_HAPLOTYPES (
-		GENERATE_FINAL_REPORT.out.report_xlsx,
-		GENERATE_FINAL_REPORT.out.arrow_data,
-		GENERATE_IVAR_TABLE.out
-			.map { table, id -> id }
-	)
+	// VISUALIZE_HAPLOTYPES (
+	// 	GENERATE_FINAL_REPORT.out.report_xlsx,
+	// 	GENERATE_FINAL_REPORT.out.arrow_data,
+	// 	GENERATE_IVAR_TABLE.out
+	// 		.map { table, id -> id }
+	// )
 
 	// GENERATE_WGSCOVPLOT ()
 
@@ -1247,8 +1247,8 @@ process VISUALIZE_HAPLOTYPES {
 	tag "${sample_id}, ${params.desired_amplicon}"
 	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
 
-	// errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	// maxRetries 
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 
 	
 	input:
 	each path(final_report)
@@ -1256,15 +1256,15 @@ process VISUALIZE_HAPLOTYPES {
 	val sample_id
 
 	output:
-	path "*.pdf"
+	path "*"
 
 	script:
 	"""
 	visualize_haplotypes.py \
 	--sample_id ${sample_id} \
 	--amplicon ${params.desired_amplicon} \
-	--long_table `realpath ${long_table}` \
-	--short_table `realpath ${final_report}`
+	--long_table ${long_table} \
+	--short_table ${final_report}
 	"""
 
 }
