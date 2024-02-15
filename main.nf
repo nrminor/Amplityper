@@ -1247,8 +1247,8 @@ process VISUALIZE_HAPLOTYPES {
 	tag "${sample_id}, ${params.desired_amplicon}"
 	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
 
-	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 
+	// errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	// maxRetries 
 	
 	input:
 	each path(final_report)
@@ -1263,8 +1263,8 @@ process VISUALIZE_HAPLOTYPES {
 	visualize_haplotypes.py \
 	--sample_id ${sample_id} \
 	--amplicon ${params.desired_amplicon} \
-	--long_table ${long_table} \
-	--short_table ${final_report}
+	--long_table `realpath ${long_table}` \
+	--short_table `realpath ${final_report}`
 	"""
 
 }
