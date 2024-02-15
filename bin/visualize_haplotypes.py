@@ -164,7 +164,7 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
     snv_lf = sample_lf.filter(~(pl.col("Alt").str.len_chars() > 1))
 
     del_lf = mnv_lf.filter(pl.col("Alt").str.contains("-")).with_columns(
-        pl.col("Alt").str.replace("-", "").str.split("").alias("Alt")
+        pl.col("Alt").str.replace("=", "").str.replace("-", "").str.split("").alias("Alt")
     )
 
     in_lf = (
@@ -181,6 +181,7 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
         new_df = (
             data.explode("Alt")
             .filter(pl.col("Alt") != "")
+            .filter(pl.col("Alt") != "=")
             .with_columns(
                 pl.col("Alt").str.replace("(.*?)", "-").alias("Alt")
             )
