@@ -136,7 +136,10 @@ async def adjust_with_offset(accum_df: pl.DataFrame) -> pl.DataFrame:
 
     for _, data in accum_df.group_by("Contig"):
         new_df = data.with_columns(
-            pl.col("insertion offset").cum_sum().cast(pl.Int32).alias("insertion offset")
+            pl.col("insertion offset")
+            .cum_sum()
+            .cast(pl.Int32)
+            .alias("insertion offset")
         )
         tmp_df.vstack(new_df, in_place=True)
 
@@ -180,7 +183,9 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
             .filter(pl.col("Alt") != "")
             .with_columns(pl.lit("-").alias("-").alias("Alt"))
             .with_row_count()
-            .with_columns((pl.col("Position") + pl.col("row_nr")).alias("Position"))
+            .with_columns(
+                (pl.col("Position") + pl.col("row_nr")).cast(pl.Int32).alias("Position")
+            )
             .drop("row_nr")
         )
     accum_df.vstack(new_df, in_place=True)
@@ -191,7 +196,9 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
             data.explode("Alt")
             .filter(pl.col("Alt") != "")
             .with_row_count()
-            .with_columns((pl.col("Position") + pl.col("row_nr")).alias("Position"))
+            .with_columns(
+                (pl.col("Position") + pl.col("row_nr")).cast(pl.Int32).alias("Position")
+            )
             .drop("row_nr")
         )
         accum_df.vstack(new_df, in_place=True)
