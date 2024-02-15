@@ -181,6 +181,9 @@ async def handle_indels(sample_lf: pl.LazyFrame) -> pl.DataFrame:
         new_df = (
             data.explode("Alt")
             .filter(pl.col("Alt") != "")
+            .with_columns(
+                pl.col("Alt").str.replace("(.*?)", "-").alias("Alt")
+            )
             .with_row_count()
             .with_columns(
                 (pl.col("Position") + pl.col("row_nr")).cast(pl.Int32).alias("Position")
