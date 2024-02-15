@@ -244,6 +244,13 @@ workflow {
 		ch_reporting_yaml
 	)
 
+	VISUALIZE_HAPLOTYPES (
+		GENERATE_FINAL_REPORT.out.report_xlsx,
+		GENERATE_FINAL_REPORT.out.arrow_data,
+		GENERATE_IVAR_TABLE.out
+			.map { table, id -> id }
+	)
+
 	// GENERATE_WGSCOVPLOT ()
 
 }
@@ -1187,7 +1194,7 @@ process GENERATE_IVAR_TABLE {
 	each path(refgff)
 
 	output:
-	path "*.tsv"
+	tuple path("*.tsv"), val(sample_id)
 
 	script:
 	sample_id = name.toString().split("_")[0]
@@ -1226,6 +1233,36 @@ process GENERATE_FINAL_REPORT {
 	--results_dir . \
 	--gene_bed ${gene_bed} \
 	--config ${config}
+	"""
+
+}
+
+process VISUALIZE_HAPLOTYPES {
+
+	/* */
+
+	label "general"
+	tag "${sample_id}, ${params.desired_amplicon}"
+	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
+
+	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
+	maxRetries 
+	
+	input:
+	each path(final_report)
+	each path(long_table)
+	val sample_id
+
+	output:
+	path "*.pdf"
+
+	script:
+	"""
+	visualize_haplotypes.py \
+	--sample_id ${sample_id} \
+	--amplicon ${params.desired_amplicon} \
+	--long_table ${long_table} \
+	--short_table ${final_report}
 	"""
 
 }
