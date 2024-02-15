@@ -238,20 +238,18 @@ workflow {
 
 	GENERATE_FINAL_REPORT (
 		GENERATE_TIDY_VCF.out.collect(),
-		GENERATE_IVAR_TABLE.out
-			.map { table, id -> table }
-			.collect(),
+		GENERATE_IVAR_TABLE.out.collect(),
 		NAME_HAPLOTYPES.out.collect(),
 		CROSS_REF_WITH_GENES.out,
 		ch_reporting_yaml
 	)
 
-	// VISUALIZE_HAPLOTYPES (
-	// 	GENERATE_FINAL_REPORT.out.report_xlsx,
-	// 	GENERATE_FINAL_REPORT.out.arrow_data,
-	// 	GENERATE_IVAR_TABLE.out
-	// 		.map { table, id -> id }
-	// )
+	VISUALIZE_HAPLOTYPES (
+		FASTQC.out.sample_id
+			.combine(
+				GENERATE_FINAL_REPORT.out
+			)
+	)
 
 	// GENERATE_WGSCOVPLOT ()
 
@@ -954,6 +952,7 @@ process FASTQC {
 	output:
 	path "${sample_id}_${primer_combo}_qc.html", emit: html
 	path "${sample_id}_${primer_combo}/", emit: multiqc_data
+	val sample_id, emit: sample_id
 
 	script:
 	"""
@@ -1196,7 +1195,7 @@ process GENERATE_IVAR_TABLE {
 	each path(refgff)
 
 	output:
-	tuple path("*.tsv"), val(sample_id)
+	path "*.tsv"
 
 	script:
 	sample_id = name.toString().split("_")[0]
@@ -1226,8 +1225,7 @@ process GENERATE_FINAL_REPORT {
 	each path(config)
 
 	output:
-	path "final_report.xlsx", emit: report_xlsx
-	path "*.arrow", emit: arrow_data
+	tuple path("haplotype_long_table.arrow"), path("final_report.xlsx")
 
 	script:
 	"""
@@ -1246,14 +1244,12 @@ process VISUALIZE_HAPLOTYPES {
 	label "general"
 	tag "${sample_id}, ${params.desired_amplicon}"
 	publishDir "${params.haplotypes}/${sample_id}", mode: 'copy', overwrite: true
-
+	
 	errorStrategy { task.attempt < 3 ? 'retry' : params.errorMode }
-	maxRetries 
+	maxRetries 2
 	
 	input:
-	each path(final_report)
-	each path(long_table)
-	val sample_id
+	tuple val(sample_id), path(long_table), path(final_report)
 
 	output:
 	path "*"
