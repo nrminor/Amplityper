@@ -115,7 +115,7 @@ async def collect_sample_data(
                 "field_2": "Alt",
             }
         )
-        .with_columns(pl.col("Position").cast(pl.Int64).alias("Position"))
+        .with_columns(pl.col("Position").alias("Position"))
         .with_columns(
             (
                 (pl.col("Alt").str.len_chars() > 1) & ~(pl.col("Alt").str.contains("-"))
